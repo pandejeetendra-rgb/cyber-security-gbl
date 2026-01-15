@@ -5,20 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Net Path Adventure</title>
 
-  <!--
-    ✅ Single-file GitHub Pages build (index.html)
-
-    IMPORTANT (for “real background images”):
-    1) Create a folder in your repo:  /assets/
-    2) Put your 5 images there with EXACT names:
-         assets/l1.png  (Level 1 image)
-         assets/l2.png  (Level 2 image)
-         assets/l3.png  (Level 3 image)
-         assets/l4.png  (Level 4 image)
-         assets/l5.png  (Level 5 image)
-    3) If any image is missing, the game will fall back to a clean SVG background.
-  -->
-
   <style>
     :root{
       --bg1:#f7f9ff;
@@ -45,9 +31,7 @@
         radial-gradient(850px 520px at 80% 10%, rgba(37,99,235,.14), transparent 55%),
         linear-gradient(180deg, var(--bg1), var(--bg2));
     }
-
     .container{ max-width: 980px; margin: 0 auto; padding: 16px; }
-
     .topbar{
       display:flex; align-items:center; justify-content:space-between; gap:12px;
       margin: 4px 0 14px;
@@ -124,7 +108,6 @@
 
     .muted{ color: var(--muted); font-size: 13px; line-height:1.45; }
 
-    /* Level map cards */
     .level-list{ display:grid; grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
     @media (min-width: 700px){ .level-list{ grid-template-columns: 1fr 1fr; } }
 
@@ -169,7 +152,6 @@
       background: rgba(255,255,255,.70);
     }
 
-    /* Play scene */
     .play-header{
       display:flex; align-items:flex-start; justify-content:space-between; gap: 10px;
       margin-bottom: 10px;
@@ -191,19 +173,18 @@
       width:0%;
     }
 
+    /* Scene */
     .scene{
       position: relative;
       border-radius: 18px;
       overflow:hidden;
       border: 1px solid var(--border);
+      min-height: 320px;
       background:
         radial-gradient(900px 400px at 20% 10%, rgba(37,99,235,.13), transparent 60%),
         radial-gradient(900px 400px at 80% 0%, rgba(79,70,229,.12), transparent 55%),
         linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.2));
-      min-height: 280px;
     }
-
-    /* Background image layer (GBL only). */
     .scene .bgimg{
       position:absolute; inset:0;
       background-position:center;
@@ -213,7 +194,7 @@
       transition: opacity .25s ease;
       z-index: 0;
     }
-    .scene.gbl .bgimg{ opacity: .95; }
+    .scene.gbl .bgimg{ opacity: .96; }
     .scene.gbl .bgimg.animate{
       animation: bgpan 10s ease-in-out infinite alternate;
     }
@@ -221,7 +202,6 @@
       from{ transform: scale(1.02) translateX(0px); }
       to{ transform: scale(1.06) translateX(-12px); }
     }
-
     .scene .mode-label{
       position:absolute; top: 12px; left: 12px;
       border: 1px solid var(--border);
@@ -236,7 +216,7 @@
     .scene .hint-strip{
       position:absolute; bottom: 12px; left: 12px; right: 12px;
       border: 1px solid var(--border);
-      background: rgba(255,255,255,.80);
+      background: rgba(255,255,255,.82);
       padding: 10px 12px;
       border-radius: 14px;
       font-size: 13px;
@@ -244,7 +224,6 @@
       backdrop-filter: blur(8px);
       z-index: 4;
     }
-
     .scene svg{
       position:absolute; inset:0;
       width:100%; height:100%;
@@ -252,7 +231,6 @@
       pointer-events:none;
     }
 
-    /* Dialogue bubble */
     .dialogue{ display:flex; gap: 12px; align-items:flex-start; }
     .avatar{
       width:44px; height:44px; border-radius: 16px;
@@ -360,7 +338,7 @@
     }
     .toast.show{ display:block; }
 
-    /* Error banner (so “not working” becomes visible immediately) */
+    /* Error banner */
     .err{
       position: fixed;
       left: 12px; right: 12px; bottom: 12px;
@@ -387,7 +365,6 @@
       font-weight: 700;
       color: rgba(127,29,29,.85);
     }
-
     .row{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
   </style>
 </head>
@@ -395,7 +372,7 @@
 <body>
   <div id="app"></div>
   <div id="modal-root"></div>
-  <div id="toast" class="toast">Connected ✔</div>
+  <div id="toast" class="toast">Done ✔</div>
 
   <div id="err" class="err">
     <div class="box">
@@ -409,21 +386,24 @@
 
   <script>
     // ---------------------------
-    // URL mode + storage keys
+    // Mode
     // ---------------------------
     const qs = new URLSearchParams(location.search);
     const MODE = (qs.get("mode") || "gbl").toLowerCase(); // gbl | control
 
-    const STORAGE_KEY = "net_path_adventure_singlefile_progress_v3";
-    const LOG_KEY = "net_path_adventure_research_log_v1";
-    const SESSION_KEY = "net_path_adventure_session_id_v1";
+    // ---------------------------
+    // Keys
+    // ---------------------------
+    const STORAGE_KEY = "net_path_progress_v4";
+    const LOG_KEY = "net_path_research_log_v2";
+    const SESSION_KEY = "net_path_session_id_v2";
 
     const APP = document.getElementById("app");
     const MODAL = document.getElementById("modal-root");
     const TOAST = document.getElementById("toast");
 
     // ---------------------------
-    // Visible error reporting (no silent failures)
+    // Error visibility
     // ---------------------------
     const ERR = document.getElementById("err");
     const ERR_TEXT = document.getElementById("errText");
@@ -444,7 +424,7 @@
     });
 
     // ---------------------------
-    // Research logging (localStorage)
+    // Session id (pseudonymous)
     // ---------------------------
     function makeId(prefix){
       return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
@@ -459,31 +439,24 @@
     }
     const SESSION_ID = getSessionId();
 
+    // ---------------------------
+    // Research logging (rich)
+    // ---------------------------
     const Research = {
-      read(){
-        try{ return JSON.parse(localStorage.getItem(LOG_KEY) || "[]"); }catch{ return []; }
-      },
-      write(rows){
-        localStorage.setItem(LOG_KEY, JSON.stringify(rows || []));
-      },
-      logEvent(evt){
+      read(){ try{ return JSON.parse(localStorage.getItem(LOG_KEY) || "[]"); }catch{ return []; } },
+      write(rows){ localStorage.setItem(LOG_KEY, JSON.stringify(rows || [])); },
+      log(evt){
         const rows = Research.read();
-        rows.push({
-          ts: new Date().toISOString(),
-          session_id: SESSION_ID,
-          mode: MODE,
-          ...evt
-        });
+        rows.push({ ts_iso: new Date().toISOString(), session_id: SESSION_ID, mode: MODE, ...evt });
         Research.write(rows);
       },
       clear(){
         Research.write([]);
-        Research.logEvent({ event:"log_cleared" });
+        Research.log({ event:"log_cleared" });
       },
       toCSV(){
         const rows = Research.read();
-        if(!rows.length) return "ts,session_id,mode,event\n";
-        const cols = Array.from(new Set(rows.flatMap(r => Object.keys(r))));
+        const cols = rows.length ? Array.from(new Set(rows.flatMap(r => Object.keys(r)))) : ["ts_iso","session_id","mode","event"];
         const esc = (v) => {
           const s = (v === null || v === undefined) ? "" : String(v);
           const needs = /[",\n]/.test(s);
@@ -492,47 +465,43 @@
         };
         const lines = [];
         lines.push(cols.map(esc).join(","));
-        for(const r of rows){
-          lines.push(cols.map(c => esc(r[c])).join(","));
-        }
+        for(const r of rows) lines.push(cols.map(c => esc(r[c])).join(","));
         return lines.join("\n");
       },
-      downloadCSV(filename){
+      downloadCSV(name){
+        Research.log({ event:"export_csv_clicked", rows_exported: Research.read().length });
         const csv = Research.toCSV();
         const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = filename || "net_path_research_log.csv";
+        a.download = name || `net_path_log_${SESSION_ID}.csv`;
         document.body.appendChild(a);
         a.click();
         a.remove();
         setTimeout(()=>URL.revokeObjectURL(url), 500);
-        Research.logEvent({ event:"log_exported_csv", filename: a.download });
       }
     };
 
-    // log a session start once per page load
-    Research.logEvent({ event:"session_start", page: location.pathname + location.search });
+    Research.log({ event:"session_start", page: location.pathname + location.search });
+
+    function logNav(eventName, extra = {}){
+      Research.log({ event: eventName, ...extra });
+    }
 
     // ---------------------------
-    // Settings
+    // UI config
     // ---------------------------
     const UI = {
-      global_settings: {
-        deterministic_shuffle: true,
-        mcq_shuffle_options: true,
-        hint_tokens_enabled: true,
-        max_hints_per_level: 3,
-        progress_save: true
-      },
-      layout: {
-        mcq_modal_lock_until_correct: true
-      }
+      deterministic_shuffle: true,
+      mcq_shuffle_options: true,
+      hint_tokens_enabled: true,
+      max_hints_per_level: 3,
+      lock_until_correct: true
     };
 
     // ---------------------------
-    // Assets (background images)
+    // Background assets (per level)
     // ---------------------------
     const ASSETS = {
       L1: "assets/l1.png",
@@ -543,270 +512,464 @@
     };
 
     // ---------------------------
-    // Content (5 Levels / 25 Questions)
+    // CONTENT (you can replace MCQs later)
     // ---------------------------
     const CONTENT = {
       levels: [
-        {
-          level_id:"L1",
-          level_title:"From ISP to Your Home",
-          learning_focus:["ISP","Last-mile connectivity","Modem/ONT","Router","Wi-Fi access"],
-          steps:[
-            { step_id:"L1_S1", scene_id:"SC_CITY_TO_HOME",
-              dialogue:{speaker:"Guide Bot",text:"Your Internet starts at the ISP. The ISP sends service to your area using a high-speed link. In many homes, the last connection is fiber or cable that reaches your building."},
-              mcq:{question_id:"L1Q1",question_text:"According to the dialogue, where does your Internet service start?",
-                choices:["At the ISP","Inside the laptop","At the Wi-Fi password","In the browser"],
-                correct_answer:"At the ISP",
-                feedback:{correct:"Correct. The dialogue says the Internet starts at the ISP.",wrong:"Try again. Read the first sentence of the dialogue."}
-              }
-            },
-            { step_id:"L1_S2", scene_id:"SC_HOME_FRONT",
-              dialogue:{speaker:"Guide Bot",text:"When the fiber or cable reaches your home, it connects to a device that converts the line signal into a form your home network can use. For fiber, this device is often an ONT. For cable, it is a modem."},
-              mcq:{question_id:"L1Q2",question_text:"Which device converts the incoming line signal for home use, as per the dialogue?",
-                choices:["ONT/Modem","Keyboard","Printer","USB drive"],
-                correct_answer:"ONT/Modem",
-                feedback:{correct:"Correct. The dialogue mentions ONT for fiber and modem for cable.",wrong:"Try again. Look for the device named in the dialogue."}
-              }
-            },
-            { step_id:"L1_S3", scene_id:"SC_LIVING_ROOM",
-              dialogue:{speaker:"Guide Bot",text:"Next, the ONT/modem connects to a router. The router shares the Internet connection with multiple devices in your home and can provide both wired and wireless connections."},
-              mcq:{question_id:"L1Q3",question_text:"What is the router’s role according to the dialogue?",
-                choices:["Share Internet with multiple devices","Increase screen brightness","Charge mobile phones","Store movies"],
-                correct_answer:"Share Internet with multiple devices",
-                feedback:{correct:"Correct. The router shares the Internet connection.",wrong:"Try again. The answer is directly stated in the dialogue."}
-              }
-            },
-            { step_id:"L1_S4", scene_id:"SC_LIVING_ROOM",
-              dialogue:{speaker:"Guide Bot",text:"Wi-Fi is the wireless connection provided by the router. Devices connect to Wi-Fi using a network name and password to prevent unauthorized access."},
-              mcq:{question_id:"L1Q4",question_text:"What prevents unauthorized access to Wi-Fi, as per the dialogue?",
-                choices:["A network name and password","A mouse pad","A bigger monitor","A screenshot"],
-                correct_answer:"A network name and password",
-                feedback:{correct:"Correct. The dialogue mentions network name and password.",wrong:"Try again. The last part of the dialogue gives the answer."}
-              }
-            },
-            { step_id:"L1_S5", scene_id:"SC_HOME_NETWORK_OVERVIEW",
-              dialogue:{speaker:"Guide Bot",text:"So the basic path is: ISP → ONT/Modem → Router → Your devices. If any link is missing, devices may not get Internet access."},
-              mcq:{question_id:"L1Q5",question_text:"Which sequence matches the dialogue?",
-                choices:["ISP → ONT/Modem → Router → Devices","Devices → Router → ISP → Modem","Router → ISP → Devices → Modem","Modem → Devices → ISP → Router"],
-                correct_answer:"ISP → ONT/Modem → Router → Devices",
-                feedback:{correct:"Correct. The dialogue states this exact path.",wrong:"Try again. The dialogue shows the complete path with arrows."}
-              }
-            }
-          ]
-        },
-        {
-          level_id:"L2",
-          level_title:"Inside the Home Network",
-          learning_focus:["Address idea","Automatic assignment","LAN vs Wi-Fi","Switch","Shared bandwidth"],
-          steps:[
-            { step_id:"L2_S1", scene_id:"SC_HOME_BLUEPRINT",
-              dialogue:{speaker:"Guide Bot",text:"Inside your home, the router connects all devices into one network. Each device needs an address on the network so data can reach the correct device."},
-              mcq:{question_id:"L2Q1",question_text:"Why does each device need an address in the home network, as per the dialogue?",
-                choices:["So data can reach the correct device","To increase battery life","To download games faster automatically","To change screen resolution"],
-                correct_answer:"So data can reach the correct device",
-                feedback:{correct:"Correct. The dialogue says the address helps data reach the right device.",wrong:"Try again. The final sentence answers this."}
-              }
-            },
-            { step_id:"L2_S2", scene_id:"SC_ROUTER_SETTINGS",
-              dialogue:{speaker:"Guide Bot",text:"Routers often assign addresses automatically. This saves time because you do not have to set an address manually for every new device."},
-              mcq:{question_id:"L2Q2",question_text:"What is the benefit of automatic address assignment mentioned in the dialogue?",
-                choices:["You don’t need to set addresses manually for every new device","It makes the monitor brighter","It changes your phone camera quality","It blocks all websites"],
-                correct_answer:"You don’t need to set addresses manually for every new device",
-                feedback:{correct:"Correct. This benefit is clearly stated.",wrong:"Try again. The dialogue explains why it saves time."}
-              }
-            },
-            { step_id:"L2_S3", scene_id:"SC_LIVING_ROOM",
-              dialogue:{speaker:"Guide Bot",text:"A device can connect using a cable (wired) or using Wi-Fi (wireless). Wired connections are stable, while Wi-Fi is convenient for mobility."},
-              mcq:{question_id:"L2Q3",question_text:"According to the dialogue, what is a key benefit of Wi-Fi?",
-                choices:["Convenience for mobility","Always faster than wired","Works without a router","No password is needed"],
-                correct_answer:"Convenience for mobility",
-                feedback:{correct:"Correct. The dialogue links Wi-Fi with mobility.",wrong:"Try again. The last phrase mentions the main benefit."}
-              }
-            },
-            { step_id:"L2_S4", scene_id:"SC_HOME_OFFICE",
-              dialogue:{speaker:"Guide Bot",text:"If you need many wired devices, a switch can be used. A switch provides extra ports so multiple wired devices can join the home network."},
-              mcq:{question_id:"L2Q4",question_text:"Why would you use a switch, based on the dialogue?",
-                choices:["To connect multiple wired devices using extra ports","To create a Wi-Fi password","To replace the ISP","To convert fiber into electrical signal"],
-                correct_answer:"To connect multiple wired devices using extra ports",
-                feedback:{correct:"Correct. The dialogue describes extra ports for wired devices.",wrong:"Try again. The dialogue directly defines the switch purpose."}
-              }
-            },
-            { step_id:"L2_S5", scene_id:"SC_HOME_BLUEPRINT",
-              dialogue:{speaker:"Guide Bot",text:"All devices share the same Internet connection. If many devices stream or download at the same time, speed may feel slower on each device."},
-              mcq:{question_id:"L2Q5",question_text:"Why may the Internet feel slower when many devices are active, as per the dialogue?",
-                choices:["Because devices share the same connection","Because the screen is small","Because the router forgets passwords","Because cables become longer"],
-                correct_answer:"Because devices share the same connection",
-                feedback:{correct:"Correct. The dialogue says the connection is shared.",wrong:"Try again. The first sentence explains the reason."}
-              }
-            }
-          ]
-        },
-        {
-          level_id:"L3",
-          level_title:"Safe Setup at Home",
-          learning_focus:["Default password risk","Updates","Encryption","Guest Wi-Fi","Router placement"],
-          steps:[
-            { step_id:"L3_S1", scene_id:"SC_ROUTER_UNBOXING",
-              dialogue:{speaker:"Guide Bot",text:"New routers may come with default login details. If you keep defaults, someone who knows them may access your router settings."},
-              mcq:{question_id:"L3Q1",question_text:"What is the risk mentioned in the dialogue?",
-                choices:["Someone may access router settings if defaults are kept","The router will not turn on","The ISP will stop service immediately","Your laptop keyboard will stop working"],
-                correct_answer:"Someone may access router settings if defaults are kept",
-                feedback:{correct:"Correct. The dialogue explains why defaults are risky.",wrong:"Try again. Focus on the second sentence."}
-              }
-            },
-            { step_id:"L3_S2", scene_id:"SC_ROUTER_SETTINGS",
-              dialogue:{speaker:"Guide Bot",text:"Router software updates can fix security issues. Enabling updates helps keep the router protected over time."},
-              mcq:{question_id:"L3Q2",question_text:"What is the purpose of router software updates in the dialogue?",
-                choices:["Fix security issues over time","Increase speaker volume","Change screen colors","Remove all Wi-Fi users"],
-                correct_answer:"Fix security issues over time",
-                feedback:{correct:"Correct. Updates help fix security issues.",wrong:"Try again. The first sentence gives the main reason."}
-              }
-            },
-            { step_id:"L3_S3", scene_id:"SC_WIFI_LOCK",
-              dialogue:{speaker:"Guide Bot",text:"A Wi-Fi security mode encrypts data between your device and the router. Encryption makes the data harder for outsiders to read."},
-              mcq:{question_id:"L3Q3",question_text:"What does encryption do according to the dialogue?",
-                choices:["Makes data harder for outsiders to read","Makes the router bigger","Deletes old files from phone","Stops all Internet traffic"],
-                correct_answer:"Makes data harder for outsiders to read",
-                feedback:{correct:"Correct. The dialogue explains encryption in simple terms.",wrong:"Try again. The second sentence states the effect."}
-              }
-            },
-            { step_id:"L3_S4", scene_id:"SC_GUEST_WIFI",
-              dialogue:{speaker:"Guide Bot",text:"A guest Wi-Fi network lets visitors use the Internet without joining your main home network. This separation improves safety for your personal devices."},
-              mcq:{question_id:"L3Q4",question_text:"Why is guest Wi-Fi helpful according to the dialogue?",
-                choices:["It separates visitors from the main home network","It removes the need for a router","It gives free Internet from the ISP","It guarantees maximum speed always"],
-                correct_answer:"It separates visitors from the main home network",
-                feedback:{correct:"Correct. Separation is the key idea mentioned.",wrong:"Try again. Read the second sentence."}
-              }
-            },
-            { step_id:"L3_S5", scene_id:"SC_HOME_BLUEPRINT",
-              dialogue:{speaker:"Guide Bot",text:"Router placement matters. A central location can improve Wi-Fi coverage, while placing it behind thick walls may weaken signals."},
-              mcq:{question_id:"L3Q5",question_text:"What improves Wi-Fi coverage as per the dialogue?",
-                choices:["Placing the router in a central location","Putting the router behind thick walls","Turning off updates","Using a weaker password"],
-                correct_answer:"Placing the router in a central location",
-                feedback:{correct:"Correct. The dialogue recommends a central location.",wrong:"Try again. The first sentence gives the clue."}
-              }
-            }
-          ]
-        },
-        {
-          level_id:"L4",
-          level_title:"Troubleshooting the Connection",
-          learning_focus:["Physical checks","LED indicators","Restart order","Isolating device issues","ISP outage"],
-          steps:[
-            { step_id:"L4_S1", scene_id:"SC_LIVING_ROOM",
-              dialogue:{speaker:"Guide Bot",text:"When Internet stops, first check power and cables. Loose connections can break the link between ONT/modem and router."},
-              mcq:{question_id:"L4Q1",question_text:"What is the first thing to check according to the dialogue?",
-                choices:["Power and cables","Buy a new laptop","Change the ISP immediately","Delete browser history"],
-                correct_answer:"Power and cables",
-                feedback:{correct:"Correct. The dialogue says first check power and cables.",wrong:"Try again. Focus on the first sentence."}
-              }
-            },
-            { step_id:"L4_S2", scene_id:"SC_ROUTER_LEDS",
-              dialogue:{speaker:"Guide Bot",text:"Indicator lights can tell the router’s status. If the Internet/WAN light shows a problem, the router may not be receiving service from the ONT/modem."},
-              mcq:{question_id:"L4Q2",question_text:"If the Internet/WAN light shows a problem, what may be happening (as per the dialogue)?",
-                choices:["Router may not be receiving service from ONT/modem","The monitor is broken","The keyboard is disconnected","The phone storage is full"],
-                correct_answer:"Router may not be receiving service from ONT/modem",
-                feedback:{correct:"Correct. The dialogue connects WAN light with receiving service.",wrong:"Try again. The second sentence gives the direct meaning."}
-              }
-            },
-            { step_id:"L4_S3", scene_id:"SC_RESTART_SEQUENCE",
-              dialogue:{speaker:"Guide Bot",text:"A safe restart can help: turn off the router and ONT/modem, wait briefly, then turn on the ONT/modem first and the router after it stabilizes."},
-              mcq:{question_id:"L4Q3",question_text:"What is the restart order mentioned in the dialogue?",
-                choices:["Turn on ONT/modem first, then router","Turn on router first, then ONT/modem","Restart only the laptop","Restart only the phone"],
-                correct_answer:"Turn on ONT/modem first, then router",
-                feedback:{correct:"Correct. The dialogue states ONT/modem first and router after.",wrong:"Try again. Read the last part carefully."}
-              }
-            },
-            { step_id:"L4_S4", scene_id:"SC_DEVICE_CHECK",
-              dialogue:{speaker:"Guide Bot",text:"Test with another device. If one device fails but others work, the issue may be on that device rather than the network."},
-              mcq:{question_id:"L4Q4",question_text:"If only one device fails while others work, what does the dialogue suggest?",
-                choices:["The issue may be on that device","The ISP is always down","The router must be replaced","Wi-Fi never works"],
-                correct_answer:"The issue may be on that device",
-                feedback:{correct:"Correct. The dialogue compares one device vs others.",wrong:"Try again. The second sentence provides the conclusion."}
-              }
-            },
-            { step_id:"L4_S5", scene_id:"SC_ISP_STATUS",
-              dialogue:{speaker:"Guide Bot",text:"Sometimes the ISP itself has an outage. If your setup looks correct but no service is coming, you may need to check ISP status or contact support."},
-              mcq:{question_id:"L4Q5",question_text:"If your setup is correct but no service is coming, what is a possible reason in the dialogue?",
-                choices:["ISP outage","Mouse battery is low","Screen is too bright","Phone camera is blocked"],
-                correct_answer:"ISP outage",
-                feedback:{correct:"Correct. The dialogue mentions ISP outage as a possibility.",wrong:"Try again. The first sentence gives the possible reason."}
-              }
-            }
-          ]
-        },
-        {
-          level_id:"L5",
-          level_title:"Smart and Secure Internet Use at Home",
-          learning_focus:["Phishing signs","Correct website check","Updates","Public Wi-Fi caution","Backups"],
-          steps:[
-            { step_id:"L5_S1", scene_id:"SC_EMAIL_INBOX",
-              dialogue:{speaker:"Guide Bot",text:"Some emails try to trick you into clicking a link and sharing passwords. If an email creates urgency and asks for sensitive details, it can be suspicious."},
-              mcq:{question_id:"L5Q1",question_text:"What makes an email suspicious according to the dialogue?",
-                choices:["It creates urgency and asks for sensitive details","It has a subject line","It contains a greeting","It is sent at night"],
-                correct_answer:"It creates urgency and asks for sensitive details",
-                feedback:{correct:"Correct. The dialogue describes urgency + sensitive details.",wrong:"Try again. The second sentence provides the clue."}
-              }
-            },
-            { step_id:"L5_S2", scene_id:"SC_BROWSER_WINDOW",
-              dialogue:{speaker:"Guide Bot",text:"When you enter passwords on websites, ensure you are on the correct site page. Small spelling changes in a site name can indicate a fake page."},
-              mcq:{question_id:"L5Q2",question_text:"What can indicate a fake page, as per the dialogue?",
-                choices:["Small spelling changes in the site name","A large monitor","A fast keyboard","A new mouse"],
-                correct_answer:"Small spelling changes in the site name",
-                feedback:{correct:"Correct. The dialogue mentions spelling changes as a warning sign.",wrong:"Try again. Look at the second sentence."}
-              }
-            },
-            { step_id:"L5_S3", scene_id:"SC_UPDATE_CENTER",
-              dialogue:{speaker:"Guide Bot",text:"Device updates can fix known problems and security weaknesses. Keeping systems updated reduces avoidable risks."},
-              mcq:{question_id:"L5Q3",question_text:"Why should devices be updated, according to the dialogue?",
-                choices:["To fix known problems and security weaknesses","To make Wi-Fi free","To remove the need for passwords","To stop using the ISP"],
-                correct_answer:"To fix known problems and security weaknesses",
-                feedback:{correct:"Correct. Updates fix known problems and weaknesses.",wrong:"Try again. The first sentence states the reason."}
-              }
-            },
-            { step_id:"L5_S4", scene_id:"SC_PUBLIC_WIFI",
-              dialogue:{speaker:"Guide Bot",text:"Public Wi-Fi networks may not be secure. Avoid entering sensitive passwords on open networks, especially when you are not sure who controls the network."},
-              mcq:{question_id:"L5Q4",question_text:"What does the dialogue advise on public Wi-Fi?",
-                choices:["Avoid entering sensitive passwords on open networks","Always share passwords with friends","Disable your router at home","Use public Wi-Fi for banking only"],
-                correct_answer:"Avoid entering sensitive passwords on open networks",
-                feedback:{correct:"Correct. The dialogue gives this advice clearly.",wrong:"Try again. The second sentence states the recommended action."}
-              }
-            },
-            { step_id:"L5_S5", scene_id:"SC_BACKUP",
-              dialogue:{speaker:"Guide Bot",text:"Important files should be backed up. A backup is a copy stored separately so you can recover your data if something goes wrong."},
-              mcq:{question_id:"L5Q5",question_text:"What is a backup, according to the dialogue?",
-                choices:["A copy stored separately for recovery","A new Wi-Fi router","A browser shortcut","A phone wallpaper"],
-                correct_answer:"A copy stored separately for recovery",
-                feedback:{correct:"Correct. The dialogue defines backup as a separate copy for recovery.",wrong:"Try again. The second sentence defines backup."}
-              }
-            }
-          ]
-        }
+        { level_id:"L1", level_title:"From ISP to Your Home", learning_focus:["ISP","Last-mile","ONT/Modem","Router","Wi-Fi"], steps:[
+          { step_id:"L1_S1", scene_id:"SC_CITY_TO_HOME",
+            dialogue:{speaker:"Guide Bot",text:"Your Internet starts at the ISP. The ISP sends service to your area using high-speed links."},
+            mcq:{question_id:"L1Q1",question_text:"Where does your Internet service start (as per dialogue)?",
+              choices:["At the ISP","Inside the laptop","At the Wi-Fi password","In the browser"], correct_answer:"At the ISP",
+              feedback:{correct:"Correct.",wrong:"Try again. The first sentence answers it."}}
+          },
+          { step_id:"L1_S2", scene_id:"SC_HOME_FRONT",
+            dialogue:{speaker:"Guide Bot",text:"When the line reaches your home, it connects to ONT/modem which converts the signal for home use."},
+            mcq:{question_id:"L1Q2",question_text:"Which device converts the incoming line signal?",
+              choices:["ONT/Modem","Keyboard","Printer","USB drive"], correct_answer:"ONT/Modem",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue names it."}}
+          },
+          { step_id:"L1_S3", scene_id:"SC_LIVING_ROOM",
+            dialogue:{speaker:"Guide Bot",text:"The ONT/modem connects to a router. The router shares the Internet connection with multiple devices."},
+            mcq:{question_id:"L1Q3",question_text:"What is the router’s role (as per dialogue)?",
+              choices:["Share Internet with multiple devices","Increase brightness","Charge phones","Store movies"], correct_answer:"Share Internet with multiple devices",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue states it."}}
+          },
+          { step_id:"L1_S4", scene_id:"SC_LIVING_ROOM",
+            dialogue:{speaker:"Guide Bot",text:"Wi-Fi is the wireless connection provided by the router. A password prevents unauthorized access."},
+            mcq:{question_id:"L1Q4",question_text:"What prevents unauthorized Wi-Fi access?",
+              choices:["A password","A mouse pad","A bigger monitor","A screenshot"], correct_answer:"A password",
+              feedback:{correct:"Correct.",wrong:"Try again. Check the last sentence."}}
+          },
+          { step_id:"L1_S5", scene_id:"SC_HOME_NETWORK_OVERVIEW",
+            dialogue:{speaker:"Guide Bot",text:"The basic path is: ISP → ONT/Modem → Router → Your devices."},
+            mcq:{question_id:"L1Q5",question_text
+              :"Which sequence matches the dialogue?",
+              choices:["ISP → ONT/Modem → Router → Devices","Devices → Router → ISP → Modem","Router → ISP → Devices → Modem","Modem → Devices → ISP → Router"],
+              correct_answer:"ISP → ONT/Modem → Router → Devices",
+              feedback:{correct:"Correct.",wrong:"Try again. It is written in the dialogue."}}
+          },
+        ]},
+        { level_id:"L2", level_title:"Inside the Home Network", learning_focus:["Addresses","Auto assignment","Wired/Wi-Fi","Switch","Shared bandwidth"], steps:[
+          { step_id:"L2_S1", scene_id:"SC_HOME_BLUEPRINT",
+            dialogue:{speaker:"Guide Bot",text:"Inside your home, each device needs an address so data reaches the correct device."},
+            mcq:{question_id:"L2Q1",question_text:"Why does each device need an address?",
+              choices:["So data reaches the correct device","To increase battery","To download games automatically","To change resolution"],
+              correct_answer:"So data reaches the correct device",
+              feedback:{correct:"Correct.",wrong:"Try again. The last phrase answers it."}}
+          },
+          { step_id:"L2_S2", scene_id:"SC_ROUTER_SETTINGS",
+            dialogue:{speaker:"Guide Bot",text:"Routers often assign addresses automatically to save time for new devices."},
+            mcq:{question_id:"L2Q2",question_text:"What is the benefit of automatic address assignment?",
+              choices:["No manual setup for each new device","It makes monitor brighter","It changes camera quality","It blocks all websites"],
+              correct_answer:"No manual setup for each new device",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue explains the time saving."}}
+          },
+          { step_id:"L2_S3", scene_id:"SC_LIVING_ROOM",
+            dialogue:{speaker:"Guide Bot",text:"Wired connections are stable; Wi-Fi is convenient for mobility."},
+            mcq:{question_id:"L2Q3",question_text:"What is a key benefit of Wi-Fi (as per dialogue)?",
+              choices:["Convenience for mobility","Always faster than wired","Works without router","No password needed"],
+              correct_answer:"Convenience for mobility",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue compares wired vs Wi-Fi."}}
+          },
+          { step_id:"L2_S4", scene_id:"SC_HOME_OFFICE",
+            dialogue:{speaker:"Guide Bot",text:"A switch provides extra ports so multiple wired devices can join the network."},
+            mcq:{question_id:"L2Q4",question_text:"Why use a switch?",
+              choices:["To connect multiple wired devices","To create Wi-Fi password","To replace ISP","To convert fiber signal"],
+              correct_answer:"To connect multiple wired devices",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue defines switch purpose."}}
+          },
+          { step_id:"L2_S5", scene_id:"SC_HOME_BLUEPRINT",
+            dialogue:{speaker:"Guide Bot",text:"All devices share the same Internet connection. Many simultaneous downloads can slow each device."},
+            mcq:{question_id:"L2Q5",question_text:"Why may speed feel slower when many devices are active?",
+              choices:["Devices share the same connection","Screen is small","Router forgets passwords","Cables become longer"],
+              correct_answer:"Devices share the same connection",
+              feedback:{correct:"Correct.",wrong:"Try again. The first sentence explains it."}}
+          },
+        ]},
+        { level_id:"L3", level_title:"Wi-Fi Basics: Speed, Coverage, Security", learning_focus:["Internet vs Wi-Fi","Speed factors","Coverage","Encryption","Guest Wi-Fi"], steps:[
+          { step_id:"L3_S1", scene_id:"SC_WIFI_OVERVIEW",
+            dialogue:{speaker:"Guide Bot",text:"Internet comes from the ISP. Wi-Fi is your local wireless connection inside the home."},
+            mcq:{question_id:"L3Q1",question_text:"According to dialogue, what is Wi-Fi?",
+              choices:["Local wireless connection inside home","The ISP itself","A type of browser","A mobile app"],
+              correct_answer:"Local wireless connection inside home",
+              feedback:{correct:"Correct.",wrong:"Try again. The second sentence defines it."}}
+          },
+          { step_id:"L3_S2", scene_id:"SC_WIFI_SPEED",
+            dialogue:{speaker:"Guide Bot",text:"Your experience depends on ISP speed and also your Wi-Fi quality. Either one can be a bottleneck."},
+            mcq:{question_id:"L3Q2",question_text:"What can affect speed as per dialogue?",
+              choices:["ISP speed and Wi-Fi quality","Only phone brand","Only laptop size","Only wall color"],
+              correct_answer:"ISP speed and Wi-Fi quality",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue mentions two factors."}}
+          },
+          { step_id:"L3_S3", scene_id:"SC_WIFI_COVERAGE",
+            dialogue:{speaker:"Guide Bot",text:"Distance and walls can weaken Wi-Fi signals in different rooms."},
+            mcq:{question_id:"L3Q3",question_text:"What can weaken Wi-Fi signals (as per dialogue)?",
+              choices:["Distance and walls","Keyboard type","Screen brightness","Battery percent"],
+              correct_answer:"Distance and walls",
+              feedback:{correct:"Correct.",wrong:"Try again. The sentence names the factors."}}
+          },
+          { step_id:"L3_S4", scene_id:"SC_WIFI_SECURITY",
+            dialogue:{speaker:"Guide Bot",text:"Encryption helps protect data between your device and router, making it harder for outsiders to read."},
+            mcq:{question_id:"L3Q4",question_text:"What is the effect of encryption (as per dialogue)?",
+              choices:["Harder for outsiders to read data","Makes router bigger","Deletes phone photos","Stops all internet"],
+              correct_answer:"Harder for outsiders to read data",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue states the effect."}}
+          },
+          { step_id:"L3_S5", scene_id:"SC_WIFI_GUEST",
+            dialogue:{speaker:"Guide Bot",text:"Guest Wi-Fi lets visitors use internet without joining your main network, improving safety."},
+            mcq:{question_id:"L3Q5",question_text:"Why is guest Wi-Fi helpful (as per dialogue)?",
+              choices:["Separates visitors from main network","Removes need for router","Gives free ISP internet","Guarantees max speed"],
+              correct_answer:"Separates visitors from main network",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue explains separation."}}
+          },
+        ]},
+        { level_id:"L4", level_title:"ISP Access Technologies", learning_focus:["Cable modem","DSL modem","CMTS","DSLAM","Access overview"], steps:[
+          { step_id:"L4_S1", scene_id:"SC_ISP_CABLE",
+            dialogue:{speaker:"Guide Bot",text:"Cable Internet uses a cable modem at home and connects to a CMTS at the provider."},
+            mcq:{question_id:"L4Q1",question_text:"Cable Internet connects cable modems to which provider device?",
+              choices:["CMTS","DSLAM","Printer","Keyboard"], correct_answer:"CMTS",
+              feedback:{correct:"Correct.",wrong:"Try again. CMTS is named in the dialogue."}}
+          },
+          { step_id:"L4_S2", scene_id:"SC_ISP_DSL",
+            dialogue:{speaker:"Guide Bot",text:"DSL Internet uses a DSL modem and connects to a DSLAM at the provider side."},
+            mcq:{question_id:"L4Q2",question_text:"DSL Internet connects DSL modems to which provider device?",
+              choices:["DSLAM","CMTS","Mouse","Monitor"], correct_answer:"DSLAM",
+              feedback:{correct:"Correct.",wrong:"Try again. DSLAM is named in the dialogue."}}
+          },
+          { step_id:"L4_S3", scene_id:"SC_CMTS",
+            dialogue:{speaker:"Guide Bot",text:"CMTS aggregates traffic from many cable subscribers and forwards it to the ISP network."},
+            mcq:{question_id:"L4Q3",question_text:"What is CMTS role (as per dialogue)?",
+              choices:["Aggregates cable subscriber traffic","Creates Wi-Fi passwords","Stores videos","Improves screen resolution"],
+              correct_answer:"Aggregates cable subscriber traffic",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue defines CMTS."}}
+          },
+          { step_id:"L4_S4", scene_id:"SC_DSLAM",
+            dialogue:{speaker:"Guide Bot",text:"DSLAM terminates multiple DSL lines and connects them to the ISP network."},
+            mcq:{question_id:"L4Q4",question_text:"What does DSLAM do (as per dialogue)?",
+              choices:["Terminates DSL lines and connects to ISP","Replaces router","Acts as keyboard","Charges phone"],
+              correct_answer:"Terminates DSL lines and connects to ISP",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue explains DSLAM."}}
+          },
+          { step_id:"L4_S5", scene_id:"SC_ISP_ACCESS_OVERVIEW",
+            dialogue:{speaker:"Guide Bot",text:"Cable and DSL are different access methods, but both ultimately connect users to the ISP Internet."},
+            mcq:{question_id:"L4Q5",question_text:"What is common in both Cable and DSL (as per dialogue)?",
+              choices:["Both connect users to ISP Internet","Both remove need for modem","Both work without provider equipment","Both guarantee same speed"],
+              correct_answer:"Both connect users to ISP Internet",
+              feedback:{correct:"Correct.",wrong:"Try again. The last phrase states the common point."}}
+          },
+        ]},
+        { level_id:"L5", level_title:"Advanced Network: Switches, APs, IoT", learning_focus:["Switch scaling","Multiple APs","Segmentation idea","IoT camera","Overview"], steps:[
+          { step_id:"L5_S1", scene_id:"SC_ADVANCED_NETWORK",
+            dialogue:{speaker:"Guide Bot",text:"As networks grow, switches help connect many wired devices while the router handles routing."},
+            mcq:{question_id:"L5Q1",question_text:"What helps connect many wired devices (as per dialogue)?",
+              choices:["Switch","Browser","Wallpaper","Screenshot"], correct_answer:"Switch",
+              feedback:{correct:"Correct.",wrong:"Try again. Switch is named."}}
+          },
+          { step_id:"L5_S2", scene_id:"SC_MULTIPLE_APS",
+            dialogue:{speaker:"Guide Bot",text:"Multiple access points improve coverage across rooms, connected back to the network."},
+            mcq:{question_id:"L5Q2",question_text:"Why use multiple access points (as per dialogue)?",
+              choices:["Improve Wi-Fi coverage","Replace ISP","Eliminate router","Remove passwords"], correct_answer:"Improve Wi-Fi coverage",
+              feedback:{correct:"Correct.",wrong:"Try again. Coverage is the key word."}}
+          },
+          { step_id:"L5_S3", scene_id:"SC_DEVICE_SEGMENTATION",
+            dialogue:{speaker:"Guide Bot",text:"Different device types (PC, TV, printer) may be connected in a structured way through the switch."},
+            mcq:{question_id:"L5Q3",question_text:"In the scene, which device is connected as a typical wired endpoint?",
+              choices:["Printer","Cloud","ISP","Mobile network"], correct_answer:"Printer",
+              feedback:{correct:"Correct.",wrong:"Try again. Look at wired endpoints in the dialogue theme."}}
+          },
+          { step_id:"L5_S4", scene_id:"SC_IOT_CAMERA",
+            dialogue:{speaker:"Guide Bot",text:"IoT devices like IP cameras join the network and should be monitored or isolated when needed."},
+            mcq:{question_id:"L5Q4",question_text:"Which IoT device is highlighted (as per dialogue)?",
+              choices:["IP Camera","Keyboard","Monitor","Mouse"], correct_answer:"IP Camera",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue names it."}}
+          },
+          { step_id:"L5_S5", scene_id:"SC_NETWORK_OVERVIEW_ADV",
+            dialogue:{speaker:"Guide Bot",text:"An advanced network often uses router + core switch + access points to connect many devices efficiently."},
+            mcq:{question_id:"L5Q5",question_text:"Which set matches the dialogue for an advanced setup?",
+              choices:["Router + Switch + Access Points","Only a phone","Only ISP tower","Only a printer"],
+              correct_answer:"Router + Switch + Access Points",
+              feedback:{correct:"Correct.",wrong:"Try again. The dialogue lists the components."}}
+          },
+        ]}
       ]
+    };
+
+    // ---------------------------
+    // Scene presets (real mapping)
+    // ---------------------------
+    const SCENE_PRESETS = {
+      // L1
+      SC_CITY_TO_HOME: {
+        nodes: [
+          { id:"ISP", label:"ISP", x:14, y:52 },
+          { id:"BACKBONE", label:"Backbone", x:42, y:52 },
+          { id:"HOME", label:"Home", x:72, y:52 }
+        ],
+        links: [["ISP","BACKBONE"],["BACKBONE","HOME"]],
+        focus:["ISP"],
+        pulsePath:["ISP","BACKBONE","HOME"]
+      },
+      SC_HOME_FRONT: {
+        nodes: [
+          { id:"LINE", label:"Line", x:18, y:55 },
+          { id:"ONT", label:"ONT/Modem", x:45, y:55 },
+          { id:"ROUTER", label:"Router", x:72, y:55 }
+        ],
+        links: [["LINE","ONT"],["ONT","ROUTER"]],
+        focus:["ONT"],
+        pulsePath:["LINE","ONT","ROUTER"]
+      },
+      SC_HOME_NETWORK_OVERVIEW: {
+        nodes: [
+          { id:"ISP", label:"ISP", x:14, y:55 },
+          { id:"ONT", label:"ONT/Modem", x:37, y:55 },
+          { id:"ROUTER", label:"Router", x:60, y:55 },
+          { id:"DEV", label:"Devices", x:84, y:55 }
+        ],
+        links: [["ISP","ONT"],["ONT","ROUTER"],["ROUTER","DEV"]],
+        focus:["ROUTER"],
+        pulsePath:["ISP","ONT","ROUTER","DEV"]
+      },
+      SC_LIVING_ROOM: {
+        nodes: [
+          { id:"ONT", label:"ONT/Modem", x:25, y:55 },
+          { id:"ROUTER", label:"Router", x:50, y:55 },
+          { id:"DEV1", label:"Laptop", x:75, y:40 },
+          { id:"DEV2", label:"Mobile", x:75, y:70 }
+        ],
+        links: [["ONT","ROUTER"],["ROUTER","DEV1"],["ROUTER","DEV2"]],
+        focus:["ROUTER"],
+        pulsePath:["ONT","ROUTER","DEV1"]
+      },
+
+      // L2
+      SC_HOME_BLUEPRINT: {
+        nodes: [
+          { id:"ONT", label:"Modem", x:40, y:22 },
+          { id:"ROUTER", label:"Router", x:50, y:52 },
+          { id:"DEV1", label:"PC", x:18, y:25 },
+          { id:"DEV2", label:"Laptop", x:68, y:78 },
+          { id:"DEV3", label:"Mobile", x:84, y:78 }
+        ],
+        links: [["ONT","ROUTER"],["ROUTER","DEV1"],["ROUTER","DEV2"],["ROUTER","DEV3"]],
+        focus:["DEV1"],
+        pulsePath:["ONT","ROUTER","DEV2"]
+      },
+      SC_ROUTER_SETTINGS: {
+        nodes: [
+          { id:"ROUTER", label:"Router (DHCP)", x:50, y:52 },
+          { id:"DEV1", label:"PC", x:18, y:25 },
+          { id:"DEV2", label:"Laptop", x:68, y:78 },
+          { id:"DEV3", label:"Mobile", x:84, y:78 }
+        ],
+        links: [["ROUTER","DEV1"],["ROUTER","DEV2"],["ROUTER","DEV3"]],
+        focus:["ROUTER"],
+        pulsePath:["ROUTER","DEV1","ROUTER","DEV3"]
+      },
+      SC_HOME_OFFICE: {
+        nodes: [
+          { id:"ROUTER", label:"Router", x:55, y:52 },
+          { id:"SWITCH", label:"Switch", x:40, y:65 },
+          { id:"DEV1", label:"Wired PC", x:20, y:35 },
+          { id:"DEV2", label:"Printer", x:22, y:80 }
+        ],
+        links: [["ROUTER","SWITCH"],["SWITCH","DEV1"],["SWITCH","DEV2"]],
+        focus:["SWITCH"],
+        pulsePath:["ROUTER","SWITCH","DEV2"]
+      },
+
+      // L3
+      SC_WIFI_OVERVIEW: {
+        nodes: [
+          { id:"ISP", label:"Internet (ISP)", x:16, y:72 },
+          { id:"ROUTER", label:"Wi-Fi Router", x:45, y:72 },
+          { id:"DEV", label:"Home Devices", x:78, y:72 }
+        ],
+        links: [["ISP","ROUTER"],["ROUTER","DEV"]],
+        focus:["ROUTER"],
+        pulsePath:["ISP","ROUTER","DEV"]
+      },
+      SC_WIFI_SPEED: {
+        nodes: [
+          { id:"ISP", label:"ISP Speed", x:20, y:72 },
+          { id:"ROUTER", label:"Router", x:50, y:72 },
+          { id:"DEV", label:"Device", x:80, y:72 }
+        ],
+        links: [["ISP","ROUTER"],["ROUTER","DEV"]],
+        focus:["ISP","ROUTER"],
+        pulsePath:["ISP","ROUTER","DEV"]
+      },
+      SC_WIFI_COVERAGE: {
+        nodes: [
+          { id:"ROUTER", label:"Router", x:50, y:55 },
+          { id:"DEV1", label:"Near room", x:70, y:35 },
+          { id:"DEV2", label:"Far room", x:70, y:80 }
+        ],
+        links: [["ROUTER","DEV1"],["ROUTER","DEV2"]],
+        focus:["DEV2"],
+        pulsePath:["ROUTER","DEV2"]
+      },
+      SC_WIFI_SECURITY: {
+        nodes: [
+          { id:"ROUTER", label:"Secured Wi-Fi", x:50, y:72 },
+          { id:"OK", label:"Authorized", x:80, y:72 },
+          { id:"BLOCK", label:"Blocked", x:80, y:35 }
+        ],
+        links: [["ROUTER","OK"]],
+        focus:["ROUTER"],
+        pulsePath:["ROUTER","OK"]
+      },
+      SC_WIFI_GUEST: {
+        nodes: [
+          { id:"ROUTER", label:"Router", x:50, y:72 },
+          { id:"HOME", label:"Home device", x:78, y:45 },
+          { id:"GUEST", label:"Guest device", x:78, y:85 }
+        ],
+        links: [["ROUTER","HOME"],["ROUTER","GUEST"]],
+        focus:["GUEST"],
+        pulsePath:["ROUTER","GUEST"]
+      },
+
+      // L4
+      SC_ISP_CABLE: {
+        nodes: [
+          { id:"HOME", label:"Home", x:18, y:28 },
+          { id:"MODEM", label:"Cable Modem", x:38, y:28 },
+          { id:"CMTS", label:"CMTS", x:62, y:28 },
+          { id:"NET", label:"ISP Internet", x:84, y:28 }
+        ],
+        links: [["HOME","MODEM"],["MODEM","CMTS"],["CMTS","NET"]],
+        focus:["MODEM"],
+        pulsePath:["HOME","MODEM","CMTS","NET"]
+      },
+      SC_ISP_DSL: {
+        nodes: [
+          { id:"HOME", label:"Home", x:18, y:72 },
+          { id:"MODEM", label:"DSL Modem", x:38, y:72 },
+          { id:"DSLAM", label:"DSLAM", x:62, y:72 },
+          { id:"NET", label:"ISP Internet", x:84, y:72 }
+        ],
+        links: [["HOME","MODEM"],["MODEM","DSLAM"],["DSLAM","NET"]],
+        focus:["DSLAM"],
+        pulsePath:["HOME","MODEM","DSLAM","NET"]
+      },
+      SC_CMTS: {
+        nodes: [
+          { id:"MODEMS", label:"Cable Modems", x:32, y:28 },
+          { id:"CMTS", label:"CMTS", x:58, y:28 },
+          { id:"NET", label:"ISP Internet", x:84, y:28 }
+        ],
+        links: [["MODEMS","CMTS"],["CMTS","NET"]],
+        focus:["CMTS"],
+        pulsePath:["MODEMS","CMTS","NET"]
+      },
+      SC_DSLAM: {
+        nodes: [
+          { id:"MODEMS", label:"DSL Modems", x:32, y:72 },
+          { id:"DSLAM", label:"DSLAM", x:58, y:72 },
+          { id:"NET", label:"ISP Internet", x:84, y:72 }
+        ],
+        links: [["MODEMS","DSLAM"],["DSLAM","NET"]],
+        focus:["DSLAM"],
+        pulsePath:["MODEMS","DSLAM","NET"]
+      },
+      SC_ISP_ACCESS_OVERVIEW: {
+        nodes: [
+          { id:"CABLE", label:"Cable Home", x:18, y:32 },
+          { id:"CMTS", label:"CMTS", x:48, y:32 },
+          { id:"DSL", label:"DSL Home", x:18, y:72 },
+          { id:"DSLAM", label:"DSLAM", x:48, y:72 },
+          { id:"NET", label:"ISP Internet", x:84, y:52 }
+        ],
+        links: [["CABLE","CMTS"],["CMTS","NET"],["DSL","DSLAM"],["DSLAM","NET"]],
+        focus:["CMTS","DSLAM"],
+        pulsePath:["CABLE","CMTS","NET"]
+      },
+
+      // L5
+      SC_ADVANCED_NETWORK: {
+        nodes: [
+          { id:"ONT", label:"ISP Modem", x:18, y:18 },
+          { id:"ROUTER", label:"Router", x:18, y:38 },
+          { id:"SWITCH", label:"Switch", x:38, y:55 },
+          { id:"AP1", label:"AP", x:58, y:38 },
+          { id:"DEV", label:"Devices", x:80, y:38 }
+        ],
+        links: [["ONT","ROUTER"],["ROUTER","SWITCH"],["SWITCH","AP1"],["AP1","DEV"]],
+        focus:["SWITCH"],
+        pulsePath:["ROUTER","SWITCH","AP1","DEV"]
+      },
+      SC_MULTIPLE_APS: {
+        nodes: [
+          { id:"ROUTER", label:"Router", x:18, y:38 },
+          { id:"SWITCH", label:"Switch", x:38, y:55 },
+          { id:"AP1", label:"AP 1", x:58, y:30 },
+          { id:"AP2", label:"AP 2", x:58, y:75 },
+          { id:"DEV1", label:"Laptop", x:80, y:30 },
+          { id:"DEV2", label:"Mobile", x:80, y:75 }
+        ],
+        links: [["ROUTER","SWITCH"],["SWITCH","AP1"],["SWITCH","AP2"],["AP1","DEV1"],["AP2","DEV2"]],
+        focus:["AP1","AP2"],
+        pulsePath:["ROUTER","SWITCH","AP1","DEV1"]
+      },
+      SC_DEVICE_SEGMENTATION: {
+        nodes: [
+          { id:"SWITCH", label:"Switch", x:38, y:55 },
+          { id:"PC", label:"Computer", x:62, y:30 },
+          { id:"TV", label:"Smart TV", x:62, y:55 },
+          { id:"PRN", label:"Printer", x:62, y:78 }
+        ],
+        links: [["SWITCH","PC"],["SWITCH","TV"],["SWITCH","PRN"]],
+        focus:["PRN"],
+        pulsePath:["SWITCH","PRN"]
+      },
+      SC_IOT_CAMERA: {
+        nodes: [
+          { id:"ROUTER", label:"Router", x:18, y:38 },
+          { id:"SWITCH", label:"Switch", x:38, y:55 },
+          { id:"CAM", label:"IP Camera", x:58, y:75 }
+        ],
+        links: [["ROUTER","SWITCH"],["SWITCH","CAM"]],
+        focus:["CAM"],
+        pulsePath:["ROUTER","SWITCH","CAM"]
+      },
+      SC_NETWORK_OVERVIEW_ADV: {
+        nodes: [
+          { id:"ONT", label:"ISP Modem", x:14, y:18 },
+          { id:"ROUTER", label:"Router", x:14, y:38 },
+          { id:"SW", label:"Core Switch", x:34, y:55 },
+          { id:"AP1", label:"AP 1", x:58, y:30 },
+          { id:"AP2", label:"AP 2", x:58, y:78 },
+          { id:"DEV", label:"Devices", x:84, y:55 }
+        ],
+        links: [["ONT","ROUTER"],["ROUTER","SW"],["SW","AP1"],["SW","AP2"],["AP1","DEV"],["AP2","DEV"]],
+        focus:["ROUTER"],
+        pulsePath:["ONT","ROUTER","SW","AP1","DEV"]
+      }
     };
 
     // ---------------------------
     // State
     // ---------------------------
     function baseState(){
-      const levels = CONTENT.levels.map(l => l.level_id);
-      const unlocked = { [levels[0]]: true };
-      for(let i=1;i<levels.length;i++) unlocked[levels[i]] = false;
-
+      const ids = CONTENT.levels.map(l => l.level_id);
+      const unlocked = {};
+      ids.forEach((id, i)=> unlocked[id] = (i===0));
       const completedSteps = {};
       const completedLevels = {};
       const hintsUsed = {};
-      for(const id of levels){
+      ids.forEach(id=>{
         completedSteps[id] = [];
         completedLevels[id] = false;
         hintsUsed[id] = 0;
-      }
+      });
       return {
         unlockedLevels: unlocked,
         completedSteps,
         completedLevels,
         hintsUsed,
-        last: { level_id: levels[0], step_index: 0 }
+        last: { level_id: ids[0], step_index: 0 }
       };
     }
 
@@ -818,31 +981,36 @@
         if(!raw) return baseState();
         const saved = JSON.parse(raw);
         const merged = { ...baseState(), ...saved };
-
         for(const lv of CONTENT.levels){
           const id = lv.level_id;
+          merged.unlockedLevels[id] = merged.unlockedLevels[id] ?? (id===CONTENT.levels[0].level_id);
           merged.completedSteps[id] = merged.completedSteps[id] || [];
           merged.completedLevels[id] = merged.completedLevels[id] || false;
           merged.hintsUsed[id] = merged.hintsUsed[id] ?? 0;
-          merged.unlockedLevels[id] = merged.unlockedLevels[id] ?? (id === CONTENT.levels[0].level_id);
         }
         return merged;
       }catch{
         return baseState();
       }
     }
-    function saveState(){ if(UI.global_settings.progress_save) localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
     function resetProgress(){
+      Research.log({ event:"reset_all" });
       localStorage.removeItem(STORAGE_KEY);
       state = baseState();
       saveState();
-      Research.logEvent({ event:"progress_reset" });
       renderLanding();
     }
 
     // ---------------------------
-    // Rendering shell
+    // Shell
     // ---------------------------
+    function overallProgressText(){
+      const total = CONTENT.levels.reduce((a,l)=>a + l.steps.length, 0);
+      const done = Object.values(state.completedSteps || {}).reduce((a,arr)=>a + (arr?.length||0), 0);
+      return `${done}/${total}`;
+    }
+
     function shell(){
       return `
         <div class="container">
@@ -861,7 +1029,6 @@
               <span class="chip"><button id="navReset">Reset</button></span>
               <span class="chip"><button id="navExport">Export CSV</button></span>
               <span class="chip"><button id="navClearLog">Clear Log</button></span>
-
               <span class="chip"><b>${MODE === "control" ? "Control" : "GBL"}</b></span>
               <span class="chip">Progress: <b>${overallProgressText()}</b></span>
               <span class="chip">Session: <b>${escapeHtml(SESSION_ID)}</b></span>
@@ -880,17 +1047,21 @@
       document.getElementById("navHome").onclick = () => renderLanding();
       document.getElementById("navMap").onclick = () => renderMap();
       document.getElementById("navReset").onclick = () =>
-        confirmModal("Reset progress?", "This clears learning progress on this device (log remains unless cleared).", () => { closeModal(); resetProgress(); });
+        confirmModal("Reset progress?", "This clears learning progress on this device (log remains unless cleared).",
+          () => { closeModal(); resetProgress(); });
 
-      document.getElementById("navExport").onclick = () => Research.downloadCSV("net_path_research_log.csv");
+      document.getElementById("navExport").onclick = () => Research.downloadCSV(`net_path_log_${SESSION_ID}.csv`);
       document.getElementById("navClearLog").onclick = () =>
-        confirmModal("Clear research log?", "This deletes the local research log on this device.", () => { closeModal(); Research.clear(); showToast("Log cleared ✔"); });
+        confirmModal("Clear research log?", "This deletes the local research log on this device.",
+          () => { closeModal(); Research.clear(); showToast("Log cleared ✔"); });
     }
 
     // ---------------------------
     // Pages
     // ---------------------------
     function renderLanding(){
+      logNav("home_view");
+
       setPage(`
         <div class="card pad">
           <div class="row">
@@ -929,6 +1100,8 @@
     }
 
     function renderMap(){
+      logNav("map_view");
+
       const cards = CONTENT.levels.map((lv, idx) => {
         const unlocked = !!state.unlockedLevels[lv.level_id];
         const done = !!state.completedLevels[lv.level_id];
@@ -978,7 +1151,7 @@
       const stepsDone = (state.completedSteps[levelId] || []).length;
       const total = level.steps.length;
 
-      Research.logEvent({ event:"level_opened", level_id: levelId });
+      Research.log({ event:"level_intro_view", level_id: levelId });
 
       setPage(`
         <div class="card pad">
@@ -1000,6 +1173,7 @@
         const nextIndex = getNextStepIndex(levelId);
         state.last = { level_id: levelId, step_index: nextIndex };
         saveState();
+        Research.log({ event:"level_start", level_id: levelId, step_index: nextIndex });
         renderPlay(levelId, nextIndex);
       };
 
@@ -1011,7 +1185,7 @@
           state.hintsUsed[levelId] = 0;
           state.last = { level_id: levelId, step_index: 0 };
           saveState();
-          Research.logEvent({ event:"level_replayed", level_id: levelId });
+          Research.log({ event:"level_replay", level_id: levelId });
           renderPlay(levelId, 0);
         });
       };
@@ -1022,17 +1196,19 @@
       const step = level.steps[stepIndex];
       const total = level.steps.length;
 
-      const pct = Math.round(((stepIndex) / total) * 100);
+      // Step timing baseline for logging
+      StepTimer.start(levelId, step.step_id, stepIndex, step.mcq?.question_id || "");
 
-      Research.logEvent({
+      Research.log({
         event:"step_view",
         level_id: levelId,
         step_id: step.step_id,
         step_index: stepIndex,
         scene_id: step.scene_id,
-        question_id: step.mcq?.question_id
+        question_id: step.mcq?.question_id || ""
       });
 
+      const pct = Math.round(((stepIndex) / total) * 100);
       const gblClass = (MODE !== "control") ? "gbl" : "control";
 
       setPage(`
@@ -1045,7 +1221,7 @@
 
             <div class="progress-wrap">
               <div class="progress"><div style="width:${pct}%;"></div></div>
-              <div class="muted">Hints used: ${(state.hintsUsed[levelId]||0)} / ${UI.global_settings.max_hints_per_level}</div>
+              <div class="muted">Hints used: ${(state.hintsUsed[levelId]||0)} / ${UI.max_hints_per_level}</div>
             </div>
 
             <div class="btn-row" style="margin:0;">
@@ -1056,8 +1232,8 @@
           <div class="grid two">
             <div class="scene ${gblClass}" id="scene">
               <div class="bgimg ${MODE !== "control" ? "animate" : ""}" id="bgimg"></div>
-              <div class="mode-label">${MODE === "control" ? "Control mode (no game visuals)" : "GBL mode (animated background)"}</div>
-              <svg id="sceneSvg" viewBox="0 0 1000 420" preserveAspectRatio="none" aria-hidden="true"></svg>
+              <div class="mode-label">${MODE === "control" ? "Control mode (no background, no animation)" : "GBL mode (background + animation)"}</div>
+              <svg id="sceneSvg" viewBox="0 0 1000 520" preserveAspectRatio="none" aria-hidden="true"></svg>
               <div class="hint-strip">${escapeHtml(sceneHint(step.scene_id))}</div>
             </div>
 
@@ -1083,7 +1259,10 @@
         </div>
       `);
 
-      document.getElementById("btnExit").onclick = () => renderLanding();
+      document.getElementById("btnExit").onclick = () => {
+        Research.log({ event:"level_exit", level_id: levelId, reason:"exit_button" });
+        renderLanding();
+      };
       document.getElementById("btnMap2").onclick = () => renderMap();
       document.getElementById("btnQ").onclick = () => openMcqModal(levelId, stepIndex);
 
@@ -1095,7 +1274,7 @@
       const level = getLevel(levelId);
       const next = getNextLevelId(levelId);
 
-      Research.logEvent({ event:"level_complete_screen", level_id: levelId });
+      Research.log({ event:"level_complete", level_id: levelId });
 
       setPage(`
         <div class="card pad">
@@ -1111,11 +1290,16 @@
 
       document.getElementById("btnMap2").onclick = () => renderMap();
       const btnNext = document.getElementById("btnNext");
-      if(btnNext && next) btnNext.onclick = () => renderLevelIntro(next);
+      if(btnNext && next){
+        btnNext.onclick = () => renderLevelIntro(next);
+      }else{
+        // game complete
+        Research.log({ event:"game_complete" });
+      }
     }
 
     // ---------------------------
-    // Background images (GBL)
+    // Background image (GBL only)
     // ---------------------------
     function setSceneBackground(levelId){
       const el = document.getElementById("bgimg");
@@ -1127,8 +1311,6 @@
       }
 
       const url = ASSETS[levelId];
-      // If image fails to load (404), we still show the SVG scene so the game continues.
-      // We do a lightweight preload:
       const img = new Image();
       img.onload = () => { el.style.backgroundImage = `url('${url}')`; };
       img.onerror = () => { el.style.backgroundImage = "none"; };
@@ -1136,156 +1318,156 @@
     }
 
     // ---------------------------
-    // Scene drawing (SVG overlay + packet animation)
+    // Scene renderer (nodes + links + pulse)
     // ---------------------------
-    function sceneHint(sceneId){
-      const map = {
-        SC_CITY_TO_HOME: "Follow the path from ISP to home.",
-        SC_HOME_FRONT: "Signal arrives at home and is converted for use.",
-        SC_LIVING_ROOM: "Home sharing happens at the router.",
-        SC_HOME_NETWORK_OVERVIEW: "See the full chain from ISP to devices.",
-        SC_HOME_BLUEPRINT: "Multiple devices share the connection.",
-        SC_ROUTER_SETTINGS: "Router settings affect safety and access.",
-        SC_HOME_OFFICE: "Switch expands wired connections.",
-        SC_ROUTER_UNBOXING: "Avoid default settings risks.",
-        SC_WIFI_LOCK: "Encryption protects data on Wi-Fi.",
-        SC_GUEST_WIFI: "Guest access should be separated.",
-        SC_ROUTER_LEDS: "LED indicators show link status.",
-        SC_RESTART_SEQUENCE: "Restart order matters.",
-        SC_DEVICE_CHECK: "Test another device to isolate the issue.",
-        SC_ISP_STATUS: "Sometimes the ISP is the problem.",
-        SC_EMAIL_INBOX: "Suspicious emails try to trick users.",
-        SC_BROWSER_WINDOW: "Check the correct website carefully.",
-        SC_UPDATE_CENTER: "Updates reduce known risks.",
-        SC_PUBLIC_WIFI: "Avoid sensitive logins on open networks.",
-        SC_BACKUP: "Backups help recovery after problems."
-      };
-      return map[sceneId] || "Observe the path and relate it to the dialogue.";
-    }
+    let currentAnimHandle = null;
 
     function drawScene(sceneId){
+      // stop prior animation loop
+      if(currentAnimHandle){
+        cancelAnimationFrame(currentAnimHandle);
+        currentAnimHandle = null;
+      }
+
       const svg = document.getElementById("sceneSvg");
       if(!svg) return;
       svg.innerHTML = "";
 
-      const animate = (MODE !== "control");
+      const preset = SCENE_PRESETS[sceneId];
+      if(!preset){
+        // fallback simple
+        svg.appendChild(svgText("No scene preset", 500, 260, 22, true));
+        return;
+      }
 
-      const presets = {
-        SC_HOME_NETWORK_OVERVIEW: ["ISP","ONT","ROUTER","DEV"],
-        SC_CITY_TO_HOME: ["ISP","LINE","HOME"],
-        SC_HOME_FRONT: ["LINE","ONT","ROUTER"],
-        SC_LIVING_ROOM: ["ONT","ROUTER","DEV"],
-        SC_HOME_BLUEPRINT: ["ROUTER","DEV1","DEV2","DEV3"],
-        SC_HOME_OFFICE: ["ROUTER","SWITCH","DEV"],
-        SC_ROUTER_SETTINGS: ["ROUTER","SET","SAFE"],
-        SC_ROUTER_UNBOXING: ["BOX","ROUTER","WARN"],
-        SC_WIFI_LOCK: ["ROUTER","LOCK","DATA"],
-        SC_GUEST_WIFI: ["ROUTER","GUEST","HOME"],
-        SC_ROUTER_LEDS: ["ROUTER","WAN","LAN"],
-        SC_RESTART_SEQUENCE: ["OFF","WAIT","ON"],
-        SC_DEVICE_CHECK: ["DEV1","DEV2","ROUTER"],
-        SC_ISP_STATUS: ["ISP","ALERT","HOME"],
-        SC_EMAIL_INBOX: ["MAIL","LINK","LOCK"],
-        SC_BROWSER_WINDOW: ["URL","CHECK","LOGIN"],
-        SC_UPDATE_CENTER: ["UPDATE","FIX","SHIELD"],
-        SC_PUBLIC_WIFI: ["WIFI","OPEN","RISK"],
-        SC_BACKUP: ["FILES","COPY","SAFE"]
-      };
+      // build node map
+      const nodeMap = new Map();
+      for(const n of preset.nodes){
+        const px = n.x * 10;      // 0-100 -> 0-1000
+        const py = n.y * 5.2;     // 0-100 -> 0-520
+        nodeMap.set(n.id, { ...n, px, py });
+      }
 
-      const nodes = presets[sceneId] || ["A","B","C"];
-      const pts = layoutPoints(nodes.length);
-
+      // background grid (light)
       svg.appendChild(gridLines());
-      svg.appendChild(pathLine(pts));
 
-      for(let i=0;i<nodes.length;i++){
-        svg.appendChild(nodeCard(nodes[i], pts[i][0], pts[i][1], i===0));
+      // links
+      for(const [a,b] of preset.links){
+        const A = nodeMap.get(a), B = nodeMap.get(b);
+        if(!A || !B) continue;
+        svg.appendChild(svgLine(A.px, A.py, B.px, B.py, "rgba(37,99,235,.40)", 10));
+        svg.appendChild(svgLine(A.px, A.py, B.px, B.py, "rgba(255,255,255,.65)", 4));
       }
 
-      if(animate && nodes.length >= 2){
-        svg.appendChild(pulseDot(pts));
+      // nodes
+      for(const n of preset.nodes){
+        const N = nodeMap.get(n.id);
+        const isFocus = (preset.focus || []).includes(n.id);
+        svg.appendChild(nodeCard(N.label, N.px, N.py, isFocus));
       }
+
+      // pulse animation only in GBL mode
+      if(MODE === "control") return;
+
+      // build pulse path points
+      const pathIds = preset.pulsePath || [];
+      const pts = pathIds.map(id => nodeMap.get(id)).filter(Boolean).map(p => ({x:p.px, y:p.py}));
+      if(pts.length < 2) return;
+
+      currentAnimHandle = animatePulse(pts, svg);
     }
 
-    function layoutPoints(n){
-      if(n === 3) return [[180,210],[500,210],[820,210]];
-      if(n === 4) return [[140,210],[380,210],[620,210],[860,210]];
-      const base = [[280,150],[720,150],[280,290],[720,290]];
-      const out = [];
-      for(let i=0;i<n;i++) out.push(base[i % base.length]);
-      return out;
+    function animatePulse(points, svg){
+      const dot = svgEl("circle", { r:"10", fill:"rgba(37,99,235,.95)" });
+      svg.appendChild(dot);
+
+      // create segments with lengths
+      const segs = [];
+      let total = 0;
+      for(let i=0;i<points.length-1;i++){
+        const a = points[i], b = points[i+1];
+        const d = Math.hypot(b.x-a.x, b.y-a.y);
+        segs.push({a,b,d,start:total});
+        total += d;
+      }
+
+      let t = 0;
+      const speed = 2.2; // pixels per frame-ish
+
+      function lerp(a,b,u){ return a + (b-a)*u; }
+
+      function tick(){
+        t += speed;
+        if(t > total) t = 0;
+
+        let s = segs[0];
+        for(const ss of segs){
+          if(t >= ss.start && t <= ss.start + ss.d){ s = ss; break; }
+        }
+        const u = s.d ? (t - s.start)/s.d : 0;
+        dot.setAttribute("cx", lerp(s.a.x, s.b.x, u));
+        dot.setAttribute("cy", lerp(s.a.y, s.b.y, u));
+
+        currentAnimHandle = requestAnimationFrame(tick);
+      }
+      currentAnimHandle = requestAnimationFrame(tick);
+      return currentAnimHandle;
     }
 
     function gridLines(){
-      const g = svgEl("g", { opacity: "0.28" });
-      for(let x=80;x<=920;x+=120){
-        g.appendChild(svgEl("line", { x1:x, y1:50, x2:x, y2:370, stroke:"rgba(15,23,42,.08)", "stroke-width":"2" }));
+      const g = svgEl("g", { opacity: "0.22" });
+      for(let x=80;x<=920;x+=140){
+        g.appendChild(svgEl("line", { x1:x, y1:60, x2:x, y2:460, stroke:"rgba(15,23,42,.08)", "stroke-width":"2" }));
       }
-      for(let y=90;y<=330;y+=120){
+      for(let y=100;y<=420;y+=120){
         g.appendChild(svgEl("line", { x1:80, y1:y, x2:920, y2:y, stroke:"rgba(15,23,42,.08)", "stroke-width":"2" }));
       }
       return g;
     }
-
-    function pathLine(pts){
-      let d = `M ${pts[0][0]} ${pts[0][1]}`;
-      for(let i=1;i<pts.length;i++) d += ` L ${pts[i][0]} ${pts[i][1]}`;
-      return svgEl("path", {
-        d, fill:"none",
-        stroke:"rgba(37,99,235,.35)",
-        "stroke-width":"10",
-        "stroke-linecap":"round"
-      });
+    function svgLine(x1,y1,x2,y2, stroke, w){
+      return svgEl("line", { x1, y1, x2, y2, stroke, "stroke-width": String(w), "stroke-linecap":"round" });
     }
 
-    function nodeCard(label, x, y, active){
+    function nodeCard(label, x, y, focus){
       const g = svgEl("g", { transform:`translate(${x},${y})` });
-      const glow = svgEl("rect", {
-        x:-62, y:-44, width:124, height:88, rx:18,
-        fill:"none",
-        stroke:"rgba(37,99,235,.22)",
-        "stroke-width":"10",
-        opacity: active ? "1" : "0"
+
+      const glow = svgEl("circle", {
+        cx:0, cy:0, r: focus ? "44" : "0",
+        fill:"rgba(37,99,235,.18)"
       });
-      const rect = svgEl("rect", {
-        x:-62, y:-44, width:124, height:88, rx:18,
+
+      const ring = svgEl("circle", {
+        cx:0, cy:0, r:"36",
         fill:"rgba(255,255,255,.92)",
-        stroke: active ? "rgba(37,99,235,.55)" : "rgba(15,23,42,.12)",
-        "stroke-width": active ? "3" : "2"
+        stroke: focus ? "rgba(37,99,235,.70)" : "rgba(15,23,42,.16)",
+        "stroke-width": focus ? "4" : "2"
       });
-      const text = svgEl("text", {
-        x:0, y:8,
+
+      const t = svgEl("text", {
+        x:0, y:6,
         "text-anchor":"middle",
-        "font-size":"26",
+        "font-size":"18",
         "font-weight":"900",
-        fill: active ? "rgba(11,18,32,1)" : "rgba(84,96,116,1)"
+        fill: focus ? "rgba(11,18,32,1)" : "rgba(84,96,116,1)"
       });
-      text.textContent = label;
+      t.textContent = label;
 
       g.appendChild(glow);
-      g.appendChild(rect);
-      g.appendChild(text);
+      g.appendChild(ring);
+      g.appendChild(t);
       return g;
     }
 
-    function pulseDot(pts){
-      const c = svgEl("circle", { cx: pts[0][0], cy: pts[0][1], r:"10", fill:"rgba(37,99,235,.95)" });
-      let t = 0;
-      const segs = pts.length - 1;
-      function lerp(a,b,u){ return a + (b-a)*u; }
-      function tick(){
-        t += 0.010;
-        if(t > segs) t = 0;
-        const s = Math.floor(t);
-        const u = t - s;
-        const a = pts[s];
-        const b = pts[s+1] || pts[0];
-        c.setAttribute("cx", lerp(a[0], b[0], u));
-        c.setAttribute("cy", lerp(a[1], b[1], u));
-        requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-      return c;
+    function svgText(text, x, y, size, bold){
+      const t = svgEl("text", {
+        x, y,
+        "text-anchor":"middle",
+        "font-size": String(size || 18),
+        "font-weight": bold ? "900" : "700",
+        fill: "rgba(84,96,116,1)"
+      });
+      t.textContent = text;
+      return t;
     }
 
     function svgEl(tag, attrs){
@@ -1294,28 +1476,67 @@
       return el;
     }
 
+    function sceneHint(sceneId){
+      const hints = {
+        SC_CITY_TO_HOME: "Watch service move from ISP toward the home.",
+        SC_HOME_FRONT: "Signal arrives and is converted before routing.",
+        SC_HOME_NETWORK_OVERVIEW: "See the full chain: ISP → modem → router → devices.",
+        SC_LIVING_ROOM: "Router is the sharing point for devices.",
+        SC_HOME_BLUEPRINT: "Router connects multiple devices; addresses matter.",
+        SC_ROUTER_SETTINGS: "Router plays a central role in auto assignment.",
+        SC_HOME_OFFICE: "Switch adds more wired ports.",
+        SC_WIFI_OVERVIEW: "Internet and Wi-Fi are different layers.",
+        SC_WIFI_SPEED: "Both ISP and Wi-Fi can be bottlenecks.",
+        SC_WIFI_COVERAGE: "Far rooms may get weaker signals.",
+        SC_WIFI_SECURITY: "Security controls access and protects data.",
+        SC_WIFI_GUEST: "Guest access stays separate from main devices.",
+        SC_ISP_CABLE: "Cable modem connects to CMTS at provider side.",
+        SC_ISP_DSL: "DSL modem connects to DSLAM at provider side.",
+        SC_CMTS: "CMTS aggregates many cable subscribers.",
+        SC_DSLAM: "DSLAM terminates multiple DSL lines.",
+        SC_ISP_ACCESS_OVERVIEW: "Different last-mile types, same ISP Internet.",
+        SC_ADVANCED_NETWORK: "Switch helps scale connections beyond router ports.",
+        SC_MULTIPLE_APS: "Two APs improve coverage in different zones.",
+        SC_DEVICE_SEGMENTATION: "Multiple wired endpoints sit behind a switch.",
+        SC_IOT_CAMERA: "IoT device joins network; monitor or isolate.",
+        SC_NETWORK_OVERVIEW_ADV: "Router + switch + APs form an efficient layout."
+      };
+      return hints[sceneId] || "Observe the animated path and relate it to the dialogue.";
+    }
+
     // ---------------------------
-    // MCQ modal (logs every attempt)
+    // MCQ modal (rich logging)
     // ---------------------------
+    const AttemptCounter = { byQ: {} };
+    const StepTimer = {
+      startMs: null,
+      current: { level_id:"", step_id:"", step_index:"", question_id:"" },
+      start(level_id, step_id, step_index, question_id){
+        this.startMs = Date.now();
+        this.current = { level_id, step_id, step_index, question_id };
+        Research.log({ event:"step_start", level_id, step_id, step_index, question_id });
+      },
+      timeOnStepSec(){
+        if(!this.startMs) return "";
+        return Math.round((Date.now() - this.startMs)/1000);
+      }
+    };
+
     function openMcqModal(levelId, stepIndex){
       const level = getLevel(levelId);
       const step = level.steps[stepIndex];
       const mcq = step.mcq;
 
-      Research.logEvent({
+      Research.log({
         event:"mcq_open",
-        level_id: levelId,
-        step_id: step.step_id,
-        question_id: mcq.question_id
+        level_id: levelId, step_id: step.step_id, step_index: stepIndex,
+        question_id: mcq.question_id,
+        time_on_step_sec: StepTimer.timeOnStepSec()
       });
 
-      const shuffle = (MODE === "control") ? false : !!UI.global_settings.mcq_shuffle_options;
-      const maxHints = UI.global_settings.max_hints_per_level || 0;
-      const hintsEnabled = !!UI.global_settings.hint_tokens_enabled;
-
       let choices = [...mcq.choices];
-      if(shuffle){
-        choices = UI.global_settings.deterministic_shuffle
+      if(MODE !== "control" && UI.mcq_shuffle_options){
+        choices = UI.deterministic_shuffle
           ? seededShuffle(choices, mcq.question_id || (levelId + "_" + stepIndex))
           : shuffleArray(choices);
       }
@@ -1324,14 +1545,16 @@
       let feedback = null;
 
       const render = () => {
-        const hintLeft = Math.max(0, maxHints - (state.hintsUsed[levelId] || 0));
+        const maxHints = UI.max_hints_per_level || 0;
+        const used = state.hintsUsed[levelId] || 0;
+        const left = Math.max(0, maxHints - used);
 
         MODAL.innerHTML = `
           <div class="modal-backdrop" role="dialog" aria-modal="true">
             <div class="modal">
               <header>
                 <h3>Question</h3>
-                <button class="ghost" id="btnClose" ${UI.layout.mcq_modal_lock_until_correct ? "disabled" : ""}>Close</button>
+                <button class="ghost" id="btnClose" ${UI.lock_until_correct ? "disabled" : ""}>Close</button>
               </header>
               <div class="body">
                 <div class="qtitle">${escapeHtml(mcq.question_text)}</div>
@@ -1343,7 +1566,7 @@
                 ${feedback ? `<div class="feedback ${feedback.type}">${escapeHtml(feedback.text)}</div>` : ""}
               </div>
               <footer>
-                ${hintsEnabled ? `<button id="btnHint" class="ghost" ${hintLeft<=0 ? "disabled" : ""}>Hint (${hintLeft} left)</button>` : ""}
+                ${UI.hint_tokens_enabled ? `<button id="btnHint" class="ghost" ${left<=0 ? "disabled" : ""}>Hint (${left} left)</button>` : ""}
                 <button id="btnSubmit" class="primary" ${selected ? "" : "disabled"}>Submit</button>
               </footer>
             </div>
@@ -1357,6 +1580,15 @@
           btn.onclick = () => {
             selected = btn.getAttribute("data-choice");
             feedback = null;
+
+            Research.log({
+              event:"mcq_option_select",
+              level_id: levelId, step_id: step.step_id, step_index: stepIndex,
+              question_id: mcq.question_id,
+              selected_answer: selected,
+              time_on_step_sec: StepTimer.timeOnStepSec()
+            });
+
             render();
           };
         });
@@ -1364,17 +1596,19 @@
         const btnHint = document.getElementById("btnHint");
         if(btnHint){
           btnHint.onclick = () => {
+            const maxHints = UI.max_hints_per_level || 0;
             const used = state.hintsUsed[levelId] || 0;
             if(used >= maxHints) return;
+
             state.hintsUsed[levelId] = used + 1;
             saveState();
 
-            Research.logEvent({
+            Research.log({
               event:"hint_used",
-              level_id: levelId,
-              step_id: step.step_id,
+              level_id: levelId, step_id: step.step_id, step_index: stepIndex,
               question_id: mcq.question_id,
-              hints_used_level: state.hintsUsed[levelId]
+              hints_used_level: state.hintsUsed[levelId],
+              time_on_step_sec: StepTimer.timeOnStepSec()
             });
 
             feedback = { type: "good", text: buildHint(step.dialogue.text, mcq.correct_answer) };
@@ -1383,31 +1617,45 @@
         }
 
         document.getElementById("btnSubmit").onclick = () => {
-          const ok = (selected === mcq.correct_answer);
+          const key = mcq.question_id || "unknown";
+          AttemptCounter.byQ[key] = (AttemptCounter.byQ[key] || 0) + 1;
 
-          Research.logEvent({
-            event:"mcq_submit",
-            level_id: levelId,
-            step_id: step.step_id,
+          const ok = (selected === mcq.correct_answer);
+          const timeOnStep = StepTimer.timeOnStepSec();
+
+          Research.log({
+            event:"mcq_attempt",
+            level_id: levelId, step_id: step.step_id, step_index: stepIndex,
             question_id: mcq.question_id,
-            selected: selected,
+            attempt_no: AttemptCounter.byQ[key],
+            selected_answer: selected,
             correct_answer: mcq.correct_answer,
-            correct: ok,
+            is_correct: ok ? 1 : 0,
+            time_on_step_sec: timeOnStep,
             hints_used_level: state.hintsUsed[levelId] || 0
           });
 
           if(ok){
-            feedback = { type:"good", text: (mcq.feedback && mcq.feedback.correct) ? mcq.feedback.correct : "Correct." };
+            feedback = { type:"good", text: mcq.feedback?.correct || "Correct." };
             render();
+
+            // step complete
+            Research.log({
+              event:"step_complete",
+              level_id: levelId, step_id: step.step_id, step_index: stepIndex,
+              question_id: mcq.question_id,
+              attempts_for_question: AttemptCounter.byQ[key],
+              time_on_step_sec: timeOnStep
+            });
+
             setTimeout(() => {
               markStepComplete(levelId, step.step_id);
-              Research.logEvent({ event:"step_complete", level_id: levelId, step_id: step.step_id, question_id: mcq.question_id });
               closeModal();
               showToast("Correct ✔");
               setTimeout(() => advance(levelId, stepIndex), 260);
-            }, 260);
+            }, 220);
           }else{
-            feedback = { type:"bad", text: (mcq.feedback && mcq.feedback.wrong) ? mcq.feedback.wrong : "Try again." };
+            feedback = { type:"bad", text: mcq.feedback?.wrong || "Try again." };
             render();
           }
         };
@@ -1449,16 +1697,17 @@
     }
 
     // ---------------------------
-    // Navigation / progress logic
+    // Progress logic
     // ---------------------------
     function resumeOrStart(){
       const last = state.last || { level_id: CONTENT.levels[0].level_id, step_index: 0 };
       const levelId = last.level_id;
       const nextIdx = getNextStepIndex(levelId);
+
       state.last = { level_id: levelId, step_index: nextIdx };
       saveState();
 
-      Research.logEvent({ event:"resume_or_start", level_id: levelId, step_index: nextIdx });
+      Research.log({ event:"resume_start", level_id: levelId, step_index: nextIdx });
 
       renderPlay(levelId, nextIdx);
     }
@@ -1475,7 +1724,6 @@
       for(let i=0;i<level.steps.length;i++){
         if(!done.has(level.steps[i].step_id)) return i;
       }
-      // if complete, keep last step index
       return Math.max(0, level.steps.length - 1);
     }
 
@@ -1501,7 +1749,7 @@
         state.last = { level_id: levelId, step_index: level.steps.length - 1 };
         saveState();
 
-        Research.logEvent({ event:"level_completed", level_id: levelId, unlocked_next: next || "" });
+        Research.log({ event:"level_completed", level_id: levelId, unlocked_next: next || "" });
 
         renderLevelComplete(levelId);
         return;
@@ -1516,14 +1764,7 @@
 
     function getNextLevelId(levelId){
       const idx = CONTENT.levels.findIndex(l => l.level_id === levelId);
-      if(idx < 0) return null;
       return CONTENT.levels[idx + 1] ? CONTENT.levels[idx + 1].level_id : null;
-    }
-
-    function overallProgressText(){
-      const totalSteps = CONTENT.levels.reduce((a,l)=>a + l.steps.length, 0);
-      const done = Object.values(state.completedSteps || {}).reduce((a,arr)=>a + (arr?.length||0), 0);
-      return `${done}/${totalSteps}`;
     }
 
     // ---------------------------
@@ -1537,7 +1778,7 @@
     }
 
     // ---------------------------
-    // Shuffle helpers (deterministic)
+    // Shuffle helpers
     // ---------------------------
     function seededShuffle(arr, seedStr){
       const a = [...arr];
@@ -1549,7 +1790,6 @@
       }
       return a;
     }
-
     function xfnv1a(str){
       let h = 2166136261 >>> 0;
       for(let i=0;i<str.length;i++){
@@ -1558,7 +1798,6 @@
       }
       return h >>> 0;
     }
-
     function mulberry32(a){
       return function() {
         let t = a += 0x6D2B79F5;
@@ -1567,7 +1806,6 @@
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
       };
     }
-
     function shuffleArray(arr){
       const a = [...arr];
       for(let i=a.length-1;i>0;i--){
@@ -1597,4 +1835,3 @@
   </script>
 </body>
 </html>
-
