@@ -337,136 +337,11 @@
     const qs = new URLSearchParams(location.search);
     const MODE = (qs.get("mode") || "gbl").toLowerCase(); // gbl | control
     const STORAGE_KEY = "net_path_adventure_singlefile_progress_v2";
+    const LOG_KEY = "net_path_adventure_research_log_v1";
 
     const APP = document.getElementById("app");
     const MODAL = document.getElementById("modal-root");
     const TOAST = document.getElementById("toast");
-
-    // ---------------------------
-    // RESEARCH LOGGING (RICH)
-    // ---------------------------
-    const LOG_KEY = "net_path_research_log_v1";
-    const PID_KEY = "net_path_participant_id_v1";
-
-    function cryptoRand(n){
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      const bytes = new Uint8Array(n);
-      (crypto && crypto.getRandomValues) ? crypto.getRandomValues(bytes) : bytes.fill(Math.floor(Math.random()*255));
-      let out = "";
-      for(let i=0;i<n;i++) out += chars[bytes[i] % chars.length];
-      return out;
-    }
-
-    function getParticipantId(){
-      let pid = localStorage.getItem(PID_KEY);
-      if(!pid){
-        pid = "P" + cryptoRand(10);
-        localStorage.setItem(PID_KEY, pid);
-      }
-      return pid;
-    }
-
-    function loadLog(){
-      try{
-        const raw = localStorage.getItem(LOG_KEY);
-        return raw ? JSON.parse(raw) : [];
-      }catch{ return []; }
-    }
-
-    function saveLog(rows){
-      localStorage.setItem(LOG_KEY, JSON.stringify(rows));
-    }
-
-    function logEvent(row){
-      const rows = loadLog();
-      rows.push(row);
-      saveLog(rows);
-    }
-
-    function csvCell(v){
-      if(v === null || v === undefined) return "";
-      const s = String(v).replaceAll('"','""');
-      return /[",\n]/.test(s) ? `"${s}"` : s;
-    }
-
-    function exportLogCSV(){
-      const rows = loadLog();
-      if(!rows.length){
-        alert("No research log data found on this device.");
-        return;
-      }
-
-      // log export click (before download)
-      logEvent({
-        event: "export_csv",
-        ts_iso: new Date().toISOString(),
-        participant_id: Research.pid,
-        mode: MODE,
-        rows_exported: rows.length
-      });
-
-      const headers = Array.from(new Set(rows.flatMap(r => Object.keys(r))));
-      const csv = [
-        headers.join(","),
-        ...rows.map(r => headers.map(h => csvCell(r[h])).join(","))
-      ].join("\n");
-
-      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `research_log_${getParticipantId()}_${new Date().toISOString().slice(0,10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    const Research = {
-      pid: getParticipantId(),
-      stepStartMs: null,
-      current: { level_id:"", step_id:"", question_id:"", step_index:"" },
-      attemptsByQuestion: {},
-
-      setStepContext(level_id, step_id, question_id, step_index){
-        this.current = { level_id, step_id, question_id, step_index };
-        this.stepStartMs = Date.now();
-
-        logEvent({
-          event: "step_start",
-          ts_iso: new Date().toISOString(),
-          participant_id: this.pid,
-          mode: MODE,
-          level_id, step_id, question_id, step_index
-        });
-      },
-
-      getTimeOnStepSec(){
-        if(!this.stepStartMs) return "";
-        return Math.round((Date.now() - this.stepStartMs)/1000);
-      },
-
-      bumpAttempt(question_id){
-        const k = question_id || "unknown_q";
-        this.attemptsByQuestion[k] = (this.attemptsByQuestion[k] || 0) + 1;
-        return this.attemptsByQuestion[k];
-      }
-    };
-
-    function logNav(eventName, extra = {}){
-      const c = Research.current || {};
-      logEvent({
-        event: eventName,
-        ts_iso: new Date().toISOString(),
-        participant_id: Research.pid,
-        mode: MODE,
-        level_id: extra.level_id ?? c.level_id ?? "",
-        step_id: extra.step_id ?? c.step_id ?? "",
-        step_index: extra.step_index ?? c.step_index ?? "",
-        question_id: extra.question_id ?? c.question_id ?? "",
-        ...extra
-      });
-    }
 
     // ---------------------------
     // Config
@@ -481,11 +356,121 @@
       },
       layout: {
         mcq_modal_lock_until_correct: true
+      },
+      research: {
+        enabled: true,
+        store_local: true,
+        include_user_agent: true,
+        include_screen: true
       }
     };
 
     // ---------------------------
-    // Content (embedded)
+    // Research Logging (local only)
+    // ---------------------------
+    const Research = (() => {
+      const enabled = !!UI.research.enabled;
+
+      function nowIso(){ return new Date().toISOString(); }
+
+      function makeSessionId(){
+        // Stable per browser unless reset: good for anonymous longitudinal session
+        const k = "net_path_adventure_session_id_v1";
+        let id = localStorage.getItem(k);
+        if(!id){
+          id = "S_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+          localStorage.setItem(k, id);
+        }
+        return id;
+      }
+
+      const session_id = makeSessionId();
+
+      function readLog(){
+        try{
+          const raw = localStorage.getItem(LOG_KEY);
+          if(!raw) return [];
+          const arr = JSON.parse(raw);
+          return Array.isArray(arr) ? arr : [];
+        }catch{
+          return [];
+        }
+      }
+
+      function writeLog(arr){
+        if(!UI.research.store_local) return;
+        try{ localStorage.setItem(LOG_KEY, JSON.stringify(arr)); }catch{}
+      }
+
+      function ctxBase(){
+        const ctx = {
+          ts: nowIso(),
+          session_id,
+          mode: MODE
+        };
+        if(UI.research.include_user_agent) ctx.user_agent = navigator.userAgent || "";
+        if(UI.research.include_screen) ctx.screen = `${window.innerWidth}x${window.innerHeight}`;
+        return ctx;
+      }
+
+      function logEvent(name, data){
+        if(!enabled) return;
+        const entry = { event: String(name||"").trim(), ...ctxBase(), ...(data||{}) };
+        const log = readLog();
+        log.push(entry);
+        // keep last ~2000 to avoid infinite growth
+        if(log.length > 2000) log.splice(0, log.length - 2000);
+        writeLog(log);
+      }
+
+      function clear(){
+        try{ localStorage.removeItem(LOG_KEY); }catch{}
+      }
+
+      function toCSV(){
+        const log = readLog();
+        if(!log.length) return "event,ts,session_id,mode\n";
+        // union keys
+        const keys = Array.from(log.reduce((set, row) => {
+          Object.keys(row).forEach(k => set.add(k));
+          return set;
+        }, new Set()));
+
+        // keep some common keys first
+        const priority = ["event","ts","session_id","mode","level_id","step_id","question_id","selected","correct","attempt_no","hint_used","page"];
+        const ordered = [];
+        for(const k of priority) if(keys.includes(k)) ordered.push(k);
+        for(const k of keys) if(!ordered.includes(k)) ordered.push(k);
+
+        const esc = (v) => {
+          const s = String(v ?? "");
+          if(/[,"\n]/.test(s)) return `"${s.replaceAll('"','""')}"`;
+          return s;
+        };
+
+        const header = ordered.join(",");
+        const rows = log.map(r => ordered.map(k => esc(r[k])).join(","));
+        return [header, ...rows].join("\n");
+      }
+
+      function downloadCSV(filename){
+        const csv = toCSV();
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename || `net_path_adventure_log_${MODE}_${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      return { logEvent, clear, toCSV, downloadCSV, session_id };
+    })();
+
+    // ---------------------------
+    // Content
     // ---------------------------
     const CONTENT = {
       levels: [
@@ -767,17 +752,10 @@
         return baseState();
       }
     }
-
     function saveState(){ if(UI.global_settings.progress_save) localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-
     function resetAll(){
-      logEvent({
-        event: "reset_all",
-        ts_iso: new Date().toISOString(),
-        participant_id: Research.pid,
-        mode: MODE
-      });
       localStorage.removeItem(STORAGE_KEY);
+      // IMPORTANT: do not auto-clear research logs on reset unless you want it.
       state = baseState();
       saveState();
       renderLanding();
@@ -801,7 +779,6 @@
               ${pillsHtml || ""}
               <span class="chip"><b>${MODE === "control" ? "Control" : "GBL"}</b></span>
               <span class="chip">Progress: <b>${overallProgressText()}</b></span>
-              <span class="chip">PID: <b>${Research.pid}</b></span>
             </div>
           </div>
           <div id="page"></div>
@@ -813,41 +790,49 @@
       APP.innerHTML = shell(`
         <span class="chip"><button id="navHome">Home</button></span>
         <span class="chip"><button id="navMap">Level Map</button></span>
+        <span class="chip"><button id="navReset">Reset</button></span>
         <span class="chip"><button id="navExport">Export CSV</button></span>
         <span class="chip"><button id="navClearLog">Clear Log</button></span>
-        <span class="chip"><button id="navReset">Reset</button></span>
       `);
       document.getElementById("page").innerHTML = html;
 
-      document.getElementById("navHome").onclick = () => { logNav("nav_home"); renderLanding(); };
-      document.getElementById("navMap").onclick = () => { logNav("nav_map"); renderMap(); };
-      document.getElementById("navExport").onclick = () => exportLogCSV();
-      document.getElementById("navClearLog").onclick = () => {
-        confirmModal("Clear research log?", "This removes logs stored on this device only.", () => {
-          closeModal();
-          localStorage.removeItem(LOG_KEY);
-          logEvent({
-            event: "clear_log",
-            ts_iso: new Date().toISOString(),
-            participant_id: Research.pid,
-            mode: MODE
-          });
-          alert("Research log cleared on this device.");
-        });
-      };
+      document.getElementById("navHome").onclick = () => renderLanding();
+      document.getElementById("navMap").onclick = () => renderMap();
       document.getElementById("navReset").onclick = () =>
-        confirmModal("Reset progress?", "This clears progress on this device.", () => { closeModal(); resetAll(); });
+        confirmModal("Reset progress?", "This clears progress on this device (log remains unless you clear it).", () => { closeModal(); resetAll(); });
+
+      document.getElementById("navExport").onclick = () => {
+        Research.logEvent("export_csv_clicked", { page: currentPageName || "unknown" });
+        Research.downloadCSV();
+      };
+
+      document.getElementById("navClearLog").onclick = () =>
+        confirmModal("Clear research log?", "This permanently removes the local event log on this device.", () => {
+          closeModal();
+          Research.clear();
+          Research.logEvent("log_cleared", { page: currentPageName || "unknown" }); // note: new empty log begins
+          showToastText("Log cleared");
+        });
     }
 
+    let currentPageName = "landing";
+
     function renderLanding(){
-      logNav("home_view", { level_id:"", step_id:"", question_id:"", step_index:"" });
+      currentPageName = "landing";
+      Research.logEvent("page_view", { page: "landing" });
 
       setPage(`
         <div class="card pad">
           <div class="row">
             <div>
               <div style="font-weight:900;font-size:18px;">Start</div>
-              <div class="muted">This is a low-cognitive-load GBL activity. Read the dialogue and answer the MCQ based only on that dialogue. You must answer correctly to proceed.</div>
+              <div class="muted">
+                Read the dialogue and answer the MCQ based only on that dialogue.
+                You must answer correctly to proceed.
+              </div>
+              <div class="muted" style="margin-top:8px;">
+                Session: <b>${escapeHtml(Research.session_id)}</b>
+              </div>
             </div>
           </div>
 
@@ -862,12 +847,13 @@
         </div>
       `);
 
-      document.getElementById("btnStart").onclick = () => { logNav("start_resume_click"); resumeOrStart(); };
-      document.getElementById("btnMap").onclick = () => { logNav("open_map_from_home"); renderMap(); };
+      document.getElementById("btnStart").onclick = () => resumeOrStart();
+      document.getElementById("btnMap").onclick = () => renderMap();
     }
 
     function renderMap(){
-      logNav("map_view", { level_id:"", step_id:"", question_id:"", step_index:"" });
+      currentPageName = "map";
+      Research.logEvent("page_view", { page: "map" });
 
       const cards = CONTENT.levels.map((lv, idx) => {
         const unlocked = !!state.unlockedLevels[lv.level_id];
@@ -907,32 +893,18 @@
       document.querySelectorAll(".level-card").forEach(el => {
         el.addEventListener("click", () => {
           const id = el.getAttribute("data-level");
-          if(!state.unlockedLevels[id]){
-            logEvent({
-              event:"level_click_locked",
-              ts_iso:new Date().toISOString(),
-              participant_id: Research.pid,
-              mode: MODE,
-              level_id: id
-            });
-            return;
-          }
-          logEvent({
-            event:"level_click_unlocked",
-            ts_iso:new Date().toISOString(),
-            participant_id: Research.pid,
-            mode: MODE,
-            level_id: id
-          });
+          if(!state.unlockedLevels[id]) return;
+          Research.logEvent("level_selected", { level_id: id, page: "map" });
           renderLevelIntro(id);
         });
       });
     }
 
     function renderLevelIntro(levelId){
-      logNav("level_intro_view", { level_id: levelId });
-
+      currentPageName = "level_intro";
       const level = getLevel(levelId);
+      Research.logEvent("page_view", { page: "level_intro", level_id: levelId });
+
       const stepsDone = (state.completedSteps[levelId] || []).length;
       const total = level.steps.length;
 
@@ -956,46 +928,32 @@
         const nextIndex = getNextStepIndex(levelId);
         state.last = { level_id: levelId, step_index: nextIndex };
         saveState();
-
-        logEvent({
-          event: "level_start",
-          ts_iso: new Date().toISOString(),
-          participant_id: Research.pid,
-          mode: MODE,
-          level_id: levelId,
-          step_index: nextIndex
-        });
-
+        Research.logEvent("level_begin_continue", { level_id: levelId, step_index: nextIndex });
         renderPlay(levelId, nextIndex);
       };
 
       document.getElementById("btnReplay").onclick = () => {
         confirmModal("Replay this level?", "This resets only this level progress.", () => {
           closeModal();
-
-          logEvent({
-            event: "level_replay",
-            ts_iso: new Date().toISOString(),
-            participant_id: Research.pid,
-            mode: MODE,
-            level_id: levelId
-          });
-
           state.completedSteps[levelId] = [];
           state.completedLevels[levelId] = false;
           state.hintsUsed[levelId] = 0;
           state.last = { level_id: levelId, step_index: 0 };
           saveState();
+          Research.logEvent("level_replay", { level_id: levelId });
           renderPlay(levelId, 0);
         });
       };
     }
 
     function renderPlay(levelId, stepIndex){
+      currentPageName = "play";
       const level = getLevel(levelId);
       const step = level.steps[stepIndex];
       const total = level.steps.length;
       const pct = Math.round((stepIndex / total) * 100);
+
+      Research.logEvent("step_view", { level_id: levelId, step_id: step.step_id, step_index });
 
       setPage(`
         <div class="card pad">
@@ -1042,31 +1000,25 @@
         </div>
       `);
 
-      // Research: step context + step view
-      Research.setStepContext(levelId, step.step_id, step.mcq?.question_id || "", stepIndex);
-      logNav("step_view");
-
       document.getElementById("btnExit").onclick = () => {
-        logNav("level_exit", { reason: "exit_button" });
+        Research.logEvent("exit_clicked", { level_id: levelId, step_id: step.step_id });
         renderLanding();
       };
-      document.getElementById("btnMap").onclick = () => { logNav("open_map_from_step"); renderMap(); };
-      document.getElementById("btnQ").onclick = () => { logNav("mcq_open_click"); openMcqModal(levelId, stepIndex); };
+      document.getElementById("btnMap").onclick = () => {
+        Research.logEvent("map_clicked", { level_id: levelId, step_id: step.step_id });
+        renderMap();
+      };
+      document.getElementById("btnQ").onclick = () => openMcqModal(levelId, stepIndex);
 
       drawScene(step.scene_id);
     }
 
     function renderLevelComplete(levelId){
-      logEvent({
-        event: "level_complete",
-        ts_iso: new Date().toISOString(),
-        participant_id: Research.pid,
-        mode: MODE,
-        level_id: levelId
-      });
-
+      currentPageName = "level_complete";
       const level = getLevel(levelId);
       const next = getNextLevelId(levelId);
+
+      Research.logEvent("level_complete", { level_id: levelId });
 
       setPage(`
         <div class="card pad">
@@ -1080,29 +1032,12 @@
         </div>
       `);
 
-      document.getElementById("btnMap").onclick = () => { logNav("back_to_map_from_complete"); renderMap(); };
+      document.getElementById("btnMap").onclick = () => renderMap();
       const btnNext = document.getElementById("btnNext");
-      if(btnNext && next){
-        btnNext.onclick = () => {
-          logEvent({
-            event: "next_level_click",
-            ts_iso: new Date().toISOString(),
-            participant_id: Research.pid,
-            mode: MODE,
-            from_level_id: levelId,
-            to_level_id: next
-          });
-          renderLevelIntro(next);
-        };
-      }else{
-        // all done
-        logEvent({
-          event: "game_complete",
-          ts_iso: new Date().toISOString(),
-          participant_id: Research.pid,
-          mode: MODE
-        });
-      }
+      if(btnNext && next) btnNext.onclick = () => {
+        Research.logEvent("next_level_clicked", { from_level_id: levelId, to_level_id: next });
+        renderLevelIntro(next);
+      };
     }
 
     // ---------------------------
@@ -1138,7 +1073,6 @@
       if(!svg) return;
       svg.innerHTML = "";
 
-      // Control mode should not animate (clean experimental separation)
       const animate = (MODE !== "control");
 
       const presets = {
@@ -1166,7 +1100,7 @@
       const nodes = presets[sceneId] || ["A","B","C"];
       const pts = layoutPoints(nodes.length);
 
-      svg.appendChild(gridLines());
+      svg.appendChild(gridLines(svg));
       svg.appendChild(pathLine(pts));
 
       for(let i=0;i<nodes.length;i++){
@@ -1187,7 +1121,7 @@
       return out;
     }
 
-    function gridLines(){
+    function gridLines(svg){
       const g = svgEl("g", { opacity: "0.28" });
       for(let x=80;x<=920;x+=120){
         g.appendChild(svgEl("line", { x1:x, y1:50, x2:x, y2:370, stroke:"rgba(15,23,42,.08)", "stroke-width":"2" }));
@@ -1274,24 +1208,17 @@
     // ---------------------------
     // MCQ modal
     // ---------------------------
+    const attemptCounter = {}; // question_id -> attempts in this session
+
     function openMcqModal(levelId, stepIndex){
       const level = getLevel(levelId);
       const step = level.steps[stepIndex];
       const mcq = step.mcq;
 
-      logEvent({
-        event: "mcq_open",
-        ts_iso: new Date().toISOString(),
-        participant_id: Research.pid,
-        mode: MODE,
-        level_id: levelId,
-        step_id: step.step_id,
-        step_index: stepIndex,
-        question_id: mcq.question_id,
-        time_on_step_sec: Research.getTimeOnStepSec()
-      });
+      Research.logEvent("mcq_opened", { level_id: levelId, step_id: step.step_id, question_id: mcq.question_id });
 
       const shuffle = (MODE === "control") ? false : !!UI.global_settings.mcq_shuffle_options;
+
       const maxHints = UI.global_settings.max_hints_per_level || 0;
       const hintsEnabled = !!UI.global_settings.hint_tokens_enabled;
 
@@ -1339,20 +1266,9 @@
           btn.onclick = () => {
             selected = btn.getAttribute("data-choice");
             feedback = null;
-
-            logEvent({
-              event: "mcq_option_select",
-              ts_iso: new Date().toISOString(),
-              participant_id: Research.pid,
-              mode: MODE,
-              level_id: levelId,
-              step_id: step.step_id,
-              step_index: stepIndex,
-              question_id: mcq.question_id,
-              selected_answer: selected,
-              time_on_step_sec: Research.getTimeOnStepSec()
+            Research.logEvent("mcq_option_selected", {
+              level_id: levelId, step_id: step.step_id, question_id: mcq.question_id, selected
             });
-
             render();
           };
         });
@@ -1364,64 +1280,35 @@
             if(used >= maxHints) return;
             state.hintsUsed[levelId] = used + 1;
             saveState();
+            feedback = { type: "good", text: buildHint(step.dialogue.text, mcq.correct_answer) };
 
-            logEvent({
-              event: "hint_used",
-              ts_iso: new Date().toISOString(),
-              participant_id: Research.pid,
-              mode: MODE,
-              level_id: levelId,
-              step_id: step.step_id,
-              step_index: stepIndex,
-              question_id: mcq.question_id,
-              hints_used_level: state.hintsUsed[levelId],
-              time_on_step_sec: Research.getTimeOnStepSec()
+            Research.logEvent("hint_used", {
+              level_id: levelId, step_id: step.step_id, question_id: mcq.question_id,
+              hint_used: true, hint_count_level: state.hintsUsed[levelId]
             });
 
-            feedback = { type: "good", text: buildHint(step.dialogue.text, mcq.correct_answer) };
             render();
           };
         }
 
         document.getElementById("btnSubmit").onclick = () => {
-          const attemptNo = Research.bumpAttempt(mcq.question_id);
-          const ok = (selected === mcq.correct_answer);
-          const timeOnStep = Research.getTimeOnStepSec();
+          const qid = mcq.question_id || (levelId + "_" + stepIndex);
+          attemptCounter[qid] = (attemptCounter[qid] || 0) + 1;
 
-          logEvent({
-            event: "mcq_attempt",
-            ts_iso: new Date().toISOString(),
-            participant_id: Research.pid,
-            mode: MODE,
+          const ok = (selected === mcq.correct_answer);
+
+          Research.logEvent("mcq_attempt", {
             level_id: levelId,
             step_id: step.step_id,
-            step_index: stepIndex,
             question_id: mcq.question_id,
-            attempt_no: attemptNo,
-            selected_answer: selected,
-            correct_answer: mcq.correct_answer,
-            is_correct: ok ? 1 : 0,
-            time_on_step_sec: timeOnStep,
-            hints_used_level: state.hintsUsed[levelId] || 0
+            selected,
+            correct: ok,
+            attempt_no: attemptCounter[qid]
           });
 
           if(ok){
             feedback = { type:"good", text: (mcq.feedback && mcq.feedback.correct) ? mcq.feedback.correct : "Correct." };
             render();
-
-            logEvent({
-              event: "step_complete",
-              ts_iso: new Date().toISOString(),
-              participant_id: Research.pid,
-              mode: MODE,
-              level_id: levelId,
-              step_id: step.step_id,
-              step_index: stepIndex,
-              question_id: mcq.question_id,
-              attempts_for_question: attemptNo,
-              time_on_step_sec: timeOnStep
-            });
-
             setTimeout(() => {
               markStepComplete(levelId, step.step_id);
               closeModal();
@@ -1465,6 +1352,12 @@
     // Toast
     // ---------------------------
     function showToast(){
+      TOAST.textContent = "Connected ✔";
+      TOAST.classList.add("show");
+      setTimeout(() => TOAST.classList.remove("show"), 900);
+    }
+    function showToastText(t){
+      TOAST.textContent = t;
       TOAST.classList.add("show");
       setTimeout(() => TOAST.classList.remove("show"), 900);
     }
@@ -1473,21 +1366,13 @@
     // Navigation / progress
     // ---------------------------
     function resumeOrStart(){
+      Research.logEvent("start_resume_clicked", { page: currentPageName || "landing" });
+
       const last = state.last || { level_id: CONTENT.levels[0].level_id, step_index: 0 };
       const levelId = last.level_id;
       const nextIdx = getNextStepIndex(levelId);
       state.last = { level_id: levelId, step_index: nextIdx };
       saveState();
-
-      logEvent({
-        event: "resume_start",
-        ts_iso: new Date().toISOString(),
-        participant_id: Research.pid,
-        mode: MODE,
-        level_id: levelId,
-        step_index: nextIdx
-      });
-
       renderPlay(levelId, nextIdx);
     }
 
@@ -1512,6 +1397,7 @@
         arr.push(stepId);
         state.completedSteps[levelId] = arr;
         saveState();
+        Research.logEvent("step_completed", { level_id: levelId, step_id: stepId });
       }
     }
 
@@ -1614,6 +1500,7 @@
     // ---------------------------
     // Start
     // ---------------------------
+    Research.logEvent("session_start", { page: "boot" });
     renderLanding();
   </script>
 </body>
