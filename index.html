@@ -4,6 +4,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Net Path Adventure</title>
+
+  <!--
+    ✅ Single-file GitHub Pages build (index.html)
+
+    IMPORTANT (for “real background images”):
+    1) Create a folder in your repo:  /assets/
+    2) Put your 5 images there with EXACT names:
+         assets/l1.png  (Level 1 image)
+         assets/l2.png  (Level 2 image)
+         assets/l3.png  (Level 3 image)
+         assets/l4.png  (Level 4 image)
+         assets/l5.png  (Level 5 image)
+    3) If any image is missing, the game will fall back to a clean SVG background.
+  -->
+
   <style>
     :root{
       --bg1:#f7f9ff;
@@ -32,26 +47,26 @@
     }
 
     .container{ max-width: 980px; margin: 0 auto; padding: 16px; }
+
     .topbar{
       display:flex; align-items:center; justify-content:space-between; gap:12px;
       margin: 4px 0 14px;
+      flex-wrap:wrap;
     }
-    .brand{
-      display:flex; align-items:center; gap:12px;
-    }
+    .brand{ display:flex; align-items:center; gap:12px; }
     .logo{
       width:44px; height:44px; border-radius:14px;
       background: linear-gradient(135deg, var(--primary), var(--primary2));
       box-shadow: 0 12px 26px rgba(37,99,235,.25);
       display:flex; align-items:center; justify-content:center;
-      color:#fff; font-weight:900;
-      letter-spacing:.5px;
+      color:#fff; font-weight:900; letter-spacing:.5px;
       user-select:none;
+      flex: 0 0 auto;
     }
     .brand h1{ margin:0; font-size:18px; line-height:1.1; }
     .brand small{ display:block; color: var(--muted); margin-top: 3px; }
 
-    .chips{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .chips{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
     .chip{
       display:inline-flex; align-items:center; gap:8px;
       border: 1px solid var(--border);
@@ -65,7 +80,7 @@
     .chip b{ color: var(--text); }
     .chip button{
       border:none; background:transparent; padding:0; cursor:pointer;
-      color: var(--primary); font-weight:800;
+      color: var(--primary); font-weight:900;
     }
 
     .card{
@@ -90,7 +105,7 @@
       padding: 10px 12px;
       border-radius: 14px;
       cursor: pointer;
-      font-weight: 800;
+      font-weight: 900;
     }
     button.primary{
       border: none;
@@ -100,6 +115,12 @@
     }
     button.ghost{ background: transparent; }
     button:disabled{ opacity:.55; cursor:not-allowed; }
+
+    a.link{
+      color: var(--primary);
+      font-weight: 900;
+      text-decoration: none;
+    }
 
     .muted{ color: var(--muted); font-size: 13px; line-height:1.45; }
 
@@ -150,11 +171,12 @@
 
     /* Play scene */
     .play-header{
-      display:flex; align-items:center; justify-content:space-between; gap: 10px;
+      display:flex; align-items:flex-start; justify-content:space-between; gap: 10px;
       margin-bottom: 10px;
+      flex-wrap:wrap;
     }
     .play-title{ font-weight: 900; }
-    .progress-wrap{ display:flex; flex-direction:column; gap:6px; }
+    .progress-wrap{ display:flex; flex-direction:column; gap:6px; min-width: 240px; flex:1; }
     .progress{
       width: 100%;
       height: 10px;
@@ -180,40 +202,58 @@
         linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.2));
       min-height: 280px;
     }
+
+    /* Background image layer (GBL only). */
+    .scene .bgimg{
+      position:absolute; inset:0;
+      background-position:center;
+      background-size: cover;
+      opacity: 0;
+      transform: scale(1.02);
+      transition: opacity .25s ease;
+      z-index: 0;
+    }
+    .scene.gbl .bgimg{ opacity: .95; }
+    .scene.gbl .bgimg.animate{
+      animation: bgpan 10s ease-in-out infinite alternate;
+    }
+    @keyframes bgpan{
+      from{ transform: scale(1.02) translateX(0px); }
+      to{ transform: scale(1.06) translateX(-12px); }
+    }
+
     .scene .mode-label{
       position:absolute; top: 12px; left: 12px;
       border: 1px solid var(--border);
-      background: rgba(255,255,255,.72);
+      background: rgba(255,255,255,.80);
       padding: 6px 10px;
       border-radius: 999px;
       font-size: 12px;
       color: var(--muted);
       backdrop-filter: blur(8px);
-      z-index: 3;
+      z-index: 4;
     }
     .scene .hint-strip{
       position:absolute; bottom: 12px; left: 12px; right: 12px;
       border: 1px solid var(--border);
-      background: rgba(255,255,255,.72);
+      background: rgba(255,255,255,.80);
       padding: 10px 12px;
       border-radius: 14px;
       font-size: 13px;
       color: var(--muted);
       backdrop-filter: blur(8px);
-      z-index: 3;
+      z-index: 4;
     }
+
     .scene svg{
       position:absolute; inset:0;
       width:100%; height:100%;
-      z-index: 1;
+      z-index: 2;
+      pointer-events:none;
     }
 
     /* Dialogue bubble */
-    .dialogue{
-      display:flex;
-      gap: 12px;
-      align-items:flex-start;
-    }
+    .dialogue{ display:flex; gap: 12px; align-items:flex-start; }
     .avatar{
       width:44px; height:44px; border-radius: 16px;
       background: linear-gradient(135deg, rgba(37,99,235,.18), rgba(79,70,229,.14));
@@ -280,7 +320,7 @@
       border-radius: 14px;
       border: 1px solid var(--border);
       background: rgba(255,255,255,.96);
-      font-weight: 850;
+      font-weight: 900;
       transition: transform .08s ease, box-shadow .08s ease, border-color .08s ease;
     }
     .option:hover{ transform: translateY(-1px); }
@@ -320,7 +360,34 @@
     }
     .toast.show{ display:block; }
 
-    /* Small helpers */
+    /* Error banner (so “not working” becomes visible immediately) */
+    .err{
+      position: fixed;
+      left: 12px; right: 12px; bottom: 12px;
+      z-index: 999;
+      display:none;
+    }
+    .err .box{
+      max-width: 980px; margin: 0 auto;
+      background: rgba(255,255,255,.96);
+      border: 1px solid rgba(220,38,38,.30);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 12px 14px;
+      color: #7f1d1d;
+      font-weight: 900;
+      display:flex;
+      align-items:flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .err .box small{
+      display:block;
+      margin-top: 4px;
+      font-weight: 700;
+      color: rgba(127,29,29,.85);
+    }
+
     .row{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
   </style>
 </head>
@@ -330,21 +397,126 @@
   <div id="modal-root"></div>
   <div id="toast" class="toast">Connected ✔</div>
 
+  <div id="err" class="err">
+    <div class="box">
+      <div>
+        Something failed in JavaScript.
+        <small id="errText"></small>
+      </div>
+      <button id="errClose" class="ghost" style="border-color:rgba(220,38,38,.25);">Close</button>
+    </div>
+  </div>
+
   <script>
     // ---------------------------
-    // Mode + storage
+    // URL mode + storage keys
     // ---------------------------
     const qs = new URLSearchParams(location.search);
     const MODE = (qs.get("mode") || "gbl").toLowerCase(); // gbl | control
-    const STORAGE_KEY = "net_path_adventure_singlefile_progress_v2";
+
+    const STORAGE_KEY = "net_path_adventure_singlefile_progress_v3";
     const LOG_KEY = "net_path_adventure_research_log_v1";
+    const SESSION_KEY = "net_path_adventure_session_id_v1";
 
     const APP = document.getElementById("app");
     const MODAL = document.getElementById("modal-root");
     const TOAST = document.getElementById("toast");
 
     // ---------------------------
-    // Config
+    // Visible error reporting (no silent failures)
+    // ---------------------------
+    const ERR = document.getElementById("err");
+    const ERR_TEXT = document.getElementById("errText");
+    document.getElementById("errClose").onclick = () => { ERR.style.display="none"; };
+
+    function showError(msg){
+      ERR_TEXT.textContent = String(msg || "Unknown error");
+      ERR.style.display = "block";
+    }
+    window.addEventListener("error", (e) => {
+      const m = (e && e.message) ? e.message : "Unknown error";
+      const ln = (e && e.lineno) ? ("Line " + e.lineno) : "";
+      showError(m + (ln ? (" • " + ln) : ""));
+    });
+    window.addEventListener("unhandledrejection", (e) => {
+      const r = e && e.reason ? (e.reason.message || String(e.reason)) : "Unknown promise rejection";
+      showError(r);
+    });
+
+    // ---------------------------
+    // Research logging (localStorage)
+    // ---------------------------
+    function makeId(prefix){
+      return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+    }
+    function getSessionId(){
+      let sid = localStorage.getItem(SESSION_KEY);
+      if(!sid){
+        sid = makeId("S");
+        localStorage.setItem(SESSION_KEY, sid);
+      }
+      return sid;
+    }
+    const SESSION_ID = getSessionId();
+
+    const Research = {
+      read(){
+        try{ return JSON.parse(localStorage.getItem(LOG_KEY) || "[]"); }catch{ return []; }
+      },
+      write(rows){
+        localStorage.setItem(LOG_KEY, JSON.stringify(rows || []));
+      },
+      logEvent(evt){
+        const rows = Research.read();
+        rows.push({
+          ts: new Date().toISOString(),
+          session_id: SESSION_ID,
+          mode: MODE,
+          ...evt
+        });
+        Research.write(rows);
+      },
+      clear(){
+        Research.write([]);
+        Research.logEvent({ event:"log_cleared" });
+      },
+      toCSV(){
+        const rows = Research.read();
+        if(!rows.length) return "ts,session_id,mode,event\n";
+        const cols = Array.from(new Set(rows.flatMap(r => Object.keys(r))));
+        const esc = (v) => {
+          const s = (v === null || v === undefined) ? "" : String(v);
+          const needs = /[",\n]/.test(s);
+          const out = s.replaceAll('"','""');
+          return needs ? `"${out}"` : out;
+        };
+        const lines = [];
+        lines.push(cols.map(esc).join(","));
+        for(const r of rows){
+          lines.push(cols.map(c => esc(r[c])).join(","));
+        }
+        return lines.join("\n");
+      },
+      downloadCSV(filename){
+        const csv = Research.toCSV();
+        const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename || "net_path_research_log.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 500);
+        Research.logEvent({ event:"log_exported_csv", filename: a.download });
+      }
+    };
+
+    // log a session start once per page load
+    Research.logEvent({ event:"session_start", page: location.pathname + location.search });
+
+    // ---------------------------
+    // Settings
     // ---------------------------
     const UI = {
       global_settings: {
@@ -356,121 +528,22 @@
       },
       layout: {
         mcq_modal_lock_until_correct: true
-      },
-      research: {
-        enabled: true,
-        store_local: true,
-        include_user_agent: true,
-        include_screen: true
       }
     };
 
     // ---------------------------
-    // Research Logging (local only)
+    // Assets (background images)
     // ---------------------------
-    const Research = (() => {
-      const enabled = !!UI.research.enabled;
-
-      function nowIso(){ return new Date().toISOString(); }
-
-      function makeSessionId(){
-        // Stable per browser unless reset: good for anonymous longitudinal session
-        const k = "net_path_adventure_session_id_v1";
-        let id = localStorage.getItem(k);
-        if(!id){
-          id = "S_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
-          localStorage.setItem(k, id);
-        }
-        return id;
-      }
-
-      const session_id = makeSessionId();
-
-      function readLog(){
-        try{
-          const raw = localStorage.getItem(LOG_KEY);
-          if(!raw) return [];
-          const arr = JSON.parse(raw);
-          return Array.isArray(arr) ? arr : [];
-        }catch{
-          return [];
-        }
-      }
-
-      function writeLog(arr){
-        if(!UI.research.store_local) return;
-        try{ localStorage.setItem(LOG_KEY, JSON.stringify(arr)); }catch{}
-      }
-
-      function ctxBase(){
-        const ctx = {
-          ts: nowIso(),
-          session_id,
-          mode: MODE
-        };
-        if(UI.research.include_user_agent) ctx.user_agent = navigator.userAgent || "";
-        if(UI.research.include_screen) ctx.screen = `${window.innerWidth}x${window.innerHeight}`;
-        return ctx;
-      }
-
-      function logEvent(name, data){
-        if(!enabled) return;
-        const entry = { event: String(name||"").trim(), ...ctxBase(), ...(data||{}) };
-        const log = readLog();
-        log.push(entry);
-        // keep last ~2000 to avoid infinite growth
-        if(log.length > 2000) log.splice(0, log.length - 2000);
-        writeLog(log);
-      }
-
-      function clear(){
-        try{ localStorage.removeItem(LOG_KEY); }catch{}
-      }
-
-      function toCSV(){
-        const log = readLog();
-        if(!log.length) return "event,ts,session_id,mode\n";
-        // union keys
-        const keys = Array.from(log.reduce((set, row) => {
-          Object.keys(row).forEach(k => set.add(k));
-          return set;
-        }, new Set()));
-
-        // keep some common keys first
-        const priority = ["event","ts","session_id","mode","level_id","step_id","question_id","selected","correct","attempt_no","hint_used","page"];
-        const ordered = [];
-        for(const k of priority) if(keys.includes(k)) ordered.push(k);
-        for(const k of keys) if(!ordered.includes(k)) ordered.push(k);
-
-        const esc = (v) => {
-          const s = String(v ?? "");
-          if(/[,"\n]/.test(s)) return `"${s.replaceAll('"','""')}"`;
-          return s;
-        };
-
-        const header = ordered.join(",");
-        const rows = log.map(r => ordered.map(k => esc(r[k])).join(","));
-        return [header, ...rows].join("\n");
-      }
-
-      function downloadCSV(filename){
-        const csv = toCSV();
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename || `net_path_adventure_log_${MODE}_${Date.now()}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      }
-
-      return { logEvent, clear, toCSV, downloadCSV, session_id };
-    })();
+    const ASSETS = {
+      L1: "assets/l1.png",
+      L2: "assets/l2.png",
+      L3: "assets/l3.png",
+      L4: "assets/l4.png",
+      L5: "assets/l5.png"
+    };
 
     // ---------------------------
-    // Content
+    // Content (5 Levels / 25 Questions)
     // ---------------------------
     const CONTENT = {
       levels: [
@@ -524,7 +597,7 @@
         {
           level_id:"L2",
           level_title:"Inside the Home Network",
-          learning_focus:["IP address idea","Auto address assignment","LAN vs Wi-Fi","Switch","Bandwidth sharing"],
+          learning_focus:["Address idea","Automatic assignment","LAN vs Wi-Fi","Switch","Shared bandwidth"],
           steps:[
             { step_id:"L2_S1", scene_id:"SC_HOME_BLUEPRINT",
               dialogue:{speaker:"Guide Bot",text:"Inside your home, the router connects all devices into one network. Each device needs an address on the network so data can reach the correct device."},
@@ -571,7 +644,7 @@
         {
           level_id:"L3",
           level_title:"Safe Setup at Home",
-          learning_focus:["Default password risk","Updates","Encryption idea","Guest Wi-Fi","Router placement"],
+          learning_focus:["Default password risk","Updates","Encryption","Guest Wi-Fi","Router placement"],
           steps:[
             { step_id:"L3_S1", scene_id:"SC_ROUTER_UNBOXING",
               dialogue:{speaker:"Guide Bot",text:"New routers may come with default login details. If you keep defaults, someone who knows them may access your router settings."},
@@ -618,7 +691,7 @@
         {
           level_id:"L4",
           level_title:"Troubleshooting the Connection",
-          learning_focus:["Physical checks","Indicator lights","Restart sequence","Device vs network issue","ISP outage idea"],
+          learning_focus:["Physical checks","LED indicators","Restart order","Isolating device issues","ISP outage"],
           steps:[
             { step_id:"L4_S1", scene_id:"SC_LIVING_ROOM",
               dialogue:{speaker:"Guide Bot",text:"When Internet stops, first check power and cables. Loose connections can break the link between ONT/modem and router."},
@@ -665,7 +738,7 @@
         {
           level_id:"L5",
           level_title:"Smart and Secure Internet Use at Home",
-          learning_focus:["Phishing awareness","Correct website check","Device updates","Public Wi-Fi caution","Backups"],
+          learning_focus:["Phishing signs","Correct website check","Updates","Public Wi-Fi caution","Backups"],
           steps:[
             { step_id:"L5_S1", scene_id:"SC_EMAIL_INBOX",
               dialogue:{speaker:"Guide Bot",text:"Some emails try to trick you into clicking a link and sharing passwords. If an email creates urgency and asks for sensitive details, it can be suspicious."},
@@ -728,7 +801,13 @@
         completedLevels[id] = false;
         hintsUsed[id] = 0;
       }
-      return { unlockedLevels: unlocked, completedSteps, completedLevels, hintsUsed, last: { level_id: levels[0], step_index: 0 } };
+      return {
+        unlockedLevels: unlocked,
+        completedSteps,
+        completedLevels,
+        hintsUsed,
+        last: { level_id: levels[0], step_index: 0 }
+      };
     }
 
     let state = loadState();
@@ -753,18 +832,18 @@
       }
     }
     function saveState(){ if(UI.global_settings.progress_save) localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-    function resetAll(){
+    function resetProgress(){
       localStorage.removeItem(STORAGE_KEY);
-      // IMPORTANT: do not auto-clear research logs on reset unless you want it.
       state = baseState();
       saveState();
+      Research.logEvent({ event:"progress_reset" });
       renderLanding();
     }
 
     // ---------------------------
-    // Rendering
+    // Rendering shell
     // ---------------------------
-    function shell(pillsHtml){
+    function shell(){
       return `
         <div class="container">
           <div class="topbar">
@@ -775,52 +854,43 @@
                 <small>Dialogue → MCQ → Correct to progress</small>
               </div>
             </div>
+
             <div class="chips">
-              ${pillsHtml || ""}
+              <span class="chip"><button id="navHome">Home</button></span>
+              <span class="chip"><button id="navMap">Level Map</button></span>
+              <span class="chip"><button id="navReset">Reset</button></span>
+              <span class="chip"><button id="navExport">Export CSV</button></span>
+              <span class="chip"><button id="navClearLog">Clear Log</button></span>
+
               <span class="chip"><b>${MODE === "control" ? "Control" : "GBL"}</b></span>
               <span class="chip">Progress: <b>${overallProgressText()}</b></span>
+              <span class="chip">Session: <b>${escapeHtml(SESSION_ID)}</b></span>
             </div>
           </div>
+
           <div id="page"></div>
         </div>
       `;
     }
 
     function setPage(html){
-      APP.innerHTML = shell(`
-        <span class="chip"><button id="navHome">Home</button></span>
-        <span class="chip"><button id="navMap">Level Map</button></span>
-        <span class="chip"><button id="navReset">Reset</button></span>
-        <span class="chip"><button id="navExport">Export CSV</button></span>
-        <span class="chip"><button id="navClearLog">Clear Log</button></span>
-      `);
+      APP.innerHTML = shell();
       document.getElementById("page").innerHTML = html;
 
       document.getElementById("navHome").onclick = () => renderLanding();
       document.getElementById("navMap").onclick = () => renderMap();
       document.getElementById("navReset").onclick = () =>
-        confirmModal("Reset progress?", "This clears progress on this device (log remains unless you clear it).", () => { closeModal(); resetAll(); });
+        confirmModal("Reset progress?", "This clears learning progress on this device (log remains unless cleared).", () => { closeModal(); resetProgress(); });
 
-      document.getElementById("navExport").onclick = () => {
-        Research.logEvent("export_csv_clicked", { page: currentPageName || "unknown" });
-        Research.downloadCSV();
-      };
-
+      document.getElementById("navExport").onclick = () => Research.downloadCSV("net_path_research_log.csv");
       document.getElementById("navClearLog").onclick = () =>
-        confirmModal("Clear research log?", "This permanently removes the local event log on this device.", () => {
-          closeModal();
-          Research.clear();
-          Research.logEvent("log_cleared", { page: currentPageName || "unknown" }); // note: new empty log begins
-          showToastText("Log cleared");
-        });
+        confirmModal("Clear research log?", "This deletes the local research log on this device.", () => { closeModal(); Research.clear(); showToast("Log cleared ✔"); });
     }
 
-    let currentPageName = "landing";
-
+    // ---------------------------
+    // Pages
+    // ---------------------------
     function renderLanding(){
-      currentPageName = "landing";
-      Research.logEvent("page_view", { page: "landing" });
-
       setPage(`
         <div class="card pad">
           <div class="row">
@@ -830,31 +900,35 @@
                 Read the dialogue and answer the MCQ based only on that dialogue.
                 You must answer correctly to proceed.
               </div>
-              <div class="muted" style="margin-top:8px;">
-                Session: <b>${escapeHtml(Research.session_id)}</b>
-              </div>
             </div>
+          </div>
+
+          <div class="muted" style="margin-top:10px;">
+            Open directly:
+            <a class="link" href="?mode=control">Control</a> &nbsp;|&nbsp;
+            <a class="link" href="?mode=gbl">GBL</a>
           </div>
 
           <div class="btn-row">
             <button class="primary" id="btnStart">Start / Resume</button>
-            <button class="ghost" id="btnMap">Open Level Map</button>
+            <button class="ghost" id="btnMap2">Open Level Map</button>
+            <button class="ghost" id="btnOpenControl">Open Control</button>
+            <button class="ghost" id="btnOpenGbl">Open GBL</button>
           </div>
 
           <div class="muted" style="margin-top:10px;">
-            Link for control: <b>?mode=control</b> &nbsp;|&nbsp; Link for game: <b>?mode=gbl</b>
+            If something fails, an on-screen error will appear at the bottom.
           </div>
         </div>
       `);
 
       document.getElementById("btnStart").onclick = () => resumeOrStart();
-      document.getElementById("btnMap").onclick = () => renderMap();
+      document.getElementById("btnMap2").onclick = () => renderMap();
+      document.getElementById("btnOpenControl").onclick = () => location.href = "?mode=control";
+      document.getElementById("btnOpenGbl").onclick = () => location.href = "?mode=gbl";
     }
 
     function renderMap(){
-      currentPageName = "map";
-      Research.logEvent("page_view", { page: "map" });
-
       const cards = CONTENT.levels.map((lv, idx) => {
         const unlocked = !!state.unlockedLevels[lv.level_id];
         const done = !!state.completedLevels[lv.level_id];
@@ -894,19 +968,17 @@
         el.addEventListener("click", () => {
           const id = el.getAttribute("data-level");
           if(!state.unlockedLevels[id]) return;
-          Research.logEvent("level_selected", { level_id: id, page: "map" });
           renderLevelIntro(id);
         });
       });
     }
 
     function renderLevelIntro(levelId){
-      currentPageName = "level_intro";
       const level = getLevel(levelId);
-      Research.logEvent("page_view", { page: "level_intro", level_id: levelId });
-
       const stepsDone = (state.completedSteps[levelId] || []).length;
       const total = level.steps.length;
+
+      Research.logEvent({ event:"level_opened", level_id: levelId });
 
       setPage(`
         <div class="card pad">
@@ -928,7 +1000,6 @@
         const nextIndex = getNextStepIndex(levelId);
         state.last = { level_id: levelId, step_index: nextIndex };
         saveState();
-        Research.logEvent("level_begin_continue", { level_id: levelId, step_index: nextIndex });
         renderPlay(levelId, nextIndex);
       };
 
@@ -940,20 +1011,29 @@
           state.hintsUsed[levelId] = 0;
           state.last = { level_id: levelId, step_index: 0 };
           saveState();
-          Research.logEvent("level_replay", { level_id: levelId });
+          Research.logEvent({ event:"level_replayed", level_id: levelId });
           renderPlay(levelId, 0);
         });
       };
     }
 
     function renderPlay(levelId, stepIndex){
-      currentPageName = "play";
       const level = getLevel(levelId);
       const step = level.steps[stepIndex];
       const total = level.steps.length;
-      const pct = Math.round((stepIndex / total) * 100);
 
-      Research.logEvent("step_view", { level_id: levelId, step_id: step.step_id, step_index });
+      const pct = Math.round(((stepIndex) / total) * 100);
+
+      Research.logEvent({
+        event:"step_view",
+        level_id: levelId,
+        step_id: step.step_id,
+        step_index: stepIndex,
+        scene_id: step.scene_id,
+        question_id: step.mcq?.question_id
+      });
+
+      const gblClass = (MODE !== "control") ? "gbl" : "control";
 
       setPage(`
         <div class="card pad">
@@ -962,20 +1042,23 @@
               <div class="play-title">${escapeHtml(level.level_title)}</div>
               <div class="muted">Step ${stepIndex+1} of ${total}</div>
             </div>
-            <div class="progress-wrap" style="min-width: 240px; flex:1;">
+
+            <div class="progress-wrap">
               <div class="progress"><div style="width:${pct}%;"></div></div>
               <div class="muted">Hints used: ${(state.hintsUsed[levelId]||0)} / ${UI.global_settings.max_hints_per_level}</div>
             </div>
+
             <div class="btn-row" style="margin:0;">
               <button class="ghost" id="btnExit">Exit</button>
             </div>
           </div>
 
           <div class="grid two">
-            <div class="scene" id="scene">
-              <div class="mode-label">${MODE === "control" ? "Control mode (no game layer)" : "GBL mode (animated scene)"}</div>
+            <div class="scene ${gblClass}" id="scene">
+              <div class="bgimg ${MODE !== "control" ? "animate" : ""}" id="bgimg"></div>
+              <div class="mode-label">${MODE === "control" ? "Control mode (no game visuals)" : "GBL mode (animated background)"}</div>
               <svg id="sceneSvg" viewBox="0 0 1000 420" preserveAspectRatio="none" aria-hidden="true"></svg>
-              <div class="hint-strip">${sceneHint(step.scene_id)}</div>
+              <div class="hint-strip">${escapeHtml(sceneHint(step.scene_id))}</div>
             </div>
 
             <div>
@@ -989,36 +1072,30 @@
 
               <div class="btn-row">
                 <button class="primary" id="btnQ">Continue → Question</button>
-                <button class="ghost" id="btnMap">Level Map</button>
+                <button class="ghost" id="btnMap2">Level Map</button>
               </div>
 
               <div class="muted" style="margin-top:10px;">
-                Note: MCQs are taken only from the dialogue shown on this screen.
+                MCQs are based only on the dialogue shown on this screen.
               </div>
             </div>
           </div>
         </div>
       `);
 
-      document.getElementById("btnExit").onclick = () => {
-        Research.logEvent("exit_clicked", { level_id: levelId, step_id: step.step_id });
-        renderLanding();
-      };
-      document.getElementById("btnMap").onclick = () => {
-        Research.logEvent("map_clicked", { level_id: levelId, step_id: step.step_id });
-        renderMap();
-      };
+      document.getElementById("btnExit").onclick = () => renderLanding();
+      document.getElementById("btnMap2").onclick = () => renderMap();
       document.getElementById("btnQ").onclick = () => openMcqModal(levelId, stepIndex);
 
+      setSceneBackground(levelId);
       drawScene(step.scene_id);
     }
 
     function renderLevelComplete(levelId){
-      currentPageName = "level_complete";
       const level = getLevel(levelId);
       const next = getNextLevelId(levelId);
 
-      Research.logEvent("level_complete", { level_id: levelId });
+      Research.logEvent({ event:"level_complete_screen", level_id: levelId });
 
       setPage(`
         <div class="card pad">
@@ -1027,21 +1104,39 @@
 
           <div class="btn-row">
             <button class="primary" id="btnNext" ${next ? "" : "disabled"}>${next ? "Next Level" : "All done"}</button>
-            <button class="ghost" id="btnMap">Back to Map</button>
+            <button class="ghost" id="btnMap2">Back to Map</button>
           </div>
         </div>
       `);
 
-      document.getElementById("btnMap").onclick = () => renderMap();
+      document.getElementById("btnMap2").onclick = () => renderMap();
       const btnNext = document.getElementById("btnNext");
-      if(btnNext && next) btnNext.onclick = () => {
-        Research.logEvent("next_level_clicked", { from_level_id: levelId, to_level_id: next });
-        renderLevelIntro(next);
-      };
+      if(btnNext && next) btnNext.onclick = () => renderLevelIntro(next);
     }
 
     // ---------------------------
-    // Scene drawing (SVG)
+    // Background images (GBL)
+    // ---------------------------
+    function setSceneBackground(levelId){
+      const el = document.getElementById("bgimg");
+      if(!el) return;
+
+      if(MODE === "control"){
+        el.style.backgroundImage = "none";
+        return;
+      }
+
+      const url = ASSETS[levelId];
+      // If image fails to load (404), we still show the SVG scene so the game continues.
+      // We do a lightweight preload:
+      const img = new Image();
+      img.onload = () => { el.style.backgroundImage = `url('${url}')`; };
+      img.onerror = () => { el.style.backgroundImage = "none"; };
+      img.src = url;
+    }
+
+    // ---------------------------
+    // Scene drawing (SVG overlay + packet animation)
     // ---------------------------
     function sceneHint(sceneId){
       const map = {
@@ -1100,7 +1195,7 @@
       const nodes = presets[sceneId] || ["A","B","C"];
       const pts = layoutPoints(nodes.length);
 
-      svg.appendChild(gridLines(svg));
+      svg.appendChild(gridLines());
       svg.appendChild(pathLine(pts));
 
       for(let i=0;i<nodes.length;i++){
@@ -1121,7 +1216,7 @@
       return out;
     }
 
-    function gridLines(svg){
+    function gridLines(){
       const g = svgEl("g", { opacity: "0.28" });
       for(let x=80;x<=920;x+=120){
         g.appendChild(svgEl("line", { x1:x, y1:50, x2:x, y2:370, stroke:"rgba(15,23,42,.08)", "stroke-width":"2" }));
@@ -1145,13 +1240,6 @@
 
     function nodeCard(label, x, y, active){
       const g = svgEl("g", { transform:`translate(${x},${y})` });
-
-      const rect = svgEl("rect", {
-        x:-62, y:-44, width:124, height:88, rx:18,
-        fill:"rgba(255,255,255,.92)",
-        stroke: active ? "rgba(37,99,235,.55)" : "rgba(15,23,42,.12)",
-        "stroke-width": active ? "3" : "2"
-      });
       const glow = svgEl("rect", {
         x:-62, y:-44, width:124, height:88, rx:18,
         fill:"none",
@@ -1159,7 +1247,12 @@
         "stroke-width":"10",
         opacity: active ? "1" : "0"
       });
-
+      const rect = svgEl("rect", {
+        x:-62, y:-44, width:124, height:88, rx:18,
+        fill:"rgba(255,255,255,.92)",
+        stroke: active ? "rgba(37,99,235,.55)" : "rgba(15,23,42,.12)",
+        "stroke-width": active ? "3" : "2"
+      });
       const text = svgEl("text", {
         x:0, y:8,
         "text-anchor":"middle",
@@ -1172,17 +1265,14 @@
       g.appendChild(glow);
       g.appendChild(rect);
       g.appendChild(text);
-
       return g;
     }
 
     function pulseDot(pts){
       const c = svgEl("circle", { cx: pts[0][0], cy: pts[0][1], r:"10", fill:"rgba(37,99,235,.95)" });
-
       let t = 0;
       const segs = pts.length - 1;
       function lerp(a,b,u){ return a + (b-a)*u; }
-
       function tick(){
         t += 0.010;
         if(t > segs) t = 0;
@@ -1190,7 +1280,6 @@
         const u = t - s;
         const a = pts[s];
         const b = pts[s+1] || pts[0];
-
         c.setAttribute("cx", lerp(a[0], b[0], u));
         c.setAttribute("cy", lerp(a[1], b[1], u));
         requestAnimationFrame(tick);
@@ -1206,19 +1295,21 @@
     }
 
     // ---------------------------
-    // MCQ modal
+    // MCQ modal (logs every attempt)
     // ---------------------------
-    const attemptCounter = {}; // question_id -> attempts in this session
-
     function openMcqModal(levelId, stepIndex){
       const level = getLevel(levelId);
       const step = level.steps[stepIndex];
       const mcq = step.mcq;
 
-      Research.logEvent("mcq_opened", { level_id: levelId, step_id: step.step_id, question_id: mcq.question_id });
+      Research.logEvent({
+        event:"mcq_open",
+        level_id: levelId,
+        step_id: step.step_id,
+        question_id: mcq.question_id
+      });
 
       const shuffle = (MODE === "control") ? false : !!UI.global_settings.mcq_shuffle_options;
-
       const maxHints = UI.global_settings.max_hints_per_level || 0;
       const hintsEnabled = !!UI.global_settings.hint_tokens_enabled;
 
@@ -1266,9 +1357,6 @@
           btn.onclick = () => {
             selected = btn.getAttribute("data-choice");
             feedback = null;
-            Research.logEvent("mcq_option_selected", {
-              level_id: levelId, step_id: step.step_id, question_id: mcq.question_id, selected
-            });
             render();
           };
         });
@@ -1280,30 +1368,32 @@
             if(used >= maxHints) return;
             state.hintsUsed[levelId] = used + 1;
             saveState();
-            feedback = { type: "good", text: buildHint(step.dialogue.text, mcq.correct_answer) };
 
-            Research.logEvent("hint_used", {
-              level_id: levelId, step_id: step.step_id, question_id: mcq.question_id,
-              hint_used: true, hint_count_level: state.hintsUsed[levelId]
+            Research.logEvent({
+              event:"hint_used",
+              level_id: levelId,
+              step_id: step.step_id,
+              question_id: mcq.question_id,
+              hints_used_level: state.hintsUsed[levelId]
             });
 
+            feedback = { type: "good", text: buildHint(step.dialogue.text, mcq.correct_answer) };
             render();
           };
         }
 
         document.getElementById("btnSubmit").onclick = () => {
-          const qid = mcq.question_id || (levelId + "_" + stepIndex);
-          attemptCounter[qid] = (attemptCounter[qid] || 0) + 1;
-
           const ok = (selected === mcq.correct_answer);
 
-          Research.logEvent("mcq_attempt", {
+          Research.logEvent({
+            event:"mcq_submit",
             level_id: levelId,
             step_id: step.step_id,
             question_id: mcq.question_id,
-            selected,
+            selected: selected,
+            correct_answer: mcq.correct_answer,
             correct: ok,
-            attempt_no: attemptCounter[qid]
+            hints_used_level: state.hintsUsed[levelId] || 0
           });
 
           if(ok){
@@ -1311,8 +1401,9 @@
             render();
             setTimeout(() => {
               markStepComplete(levelId, step.step_id);
+              Research.logEvent({ event:"step_complete", level_id: levelId, step_id: step.step_id, question_id: mcq.question_id });
               closeModal();
-              showToast();
+              showToast("Correct ✔");
               setTimeout(() => advance(levelId, stepIndex), 260);
             }, 260);
           }else{
@@ -1351,28 +1442,24 @@
     // ---------------------------
     // Toast
     // ---------------------------
-    function showToast(){
-      TOAST.textContent = "Connected ✔";
-      TOAST.classList.add("show");
-      setTimeout(() => TOAST.classList.remove("show"), 900);
-    }
-    function showToastText(t){
-      TOAST.textContent = t;
+    function showToast(text){
+      if(text) TOAST.textContent = text;
       TOAST.classList.add("show");
       setTimeout(() => TOAST.classList.remove("show"), 900);
     }
 
     // ---------------------------
-    // Navigation / progress
+    // Navigation / progress logic
     // ---------------------------
     function resumeOrStart(){
-      Research.logEvent("start_resume_clicked", { page: currentPageName || "landing" });
-
       const last = state.last || { level_id: CONTENT.levels[0].level_id, step_index: 0 };
       const levelId = last.level_id;
       const nextIdx = getNextStepIndex(levelId);
       state.last = { level_id: levelId, step_index: nextIdx };
       saveState();
+
+      Research.logEvent({ event:"resume_or_start", level_id: levelId, step_index: nextIdx });
+
       renderPlay(levelId, nextIdx);
     }
 
@@ -1388,6 +1475,7 @@
       for(let i=0;i<level.steps.length;i++){
         if(!done.has(level.steps[i].step_id)) return i;
       }
+      // if complete, keep last step index
       return Math.max(0, level.steps.length - 1);
     }
 
@@ -1397,7 +1485,6 @@
         arr.push(stepId);
         state.completedSteps[levelId] = arr;
         saveState();
-        Research.logEvent("step_completed", { level_id: levelId, step_id: stepId });
       }
     }
 
@@ -1407,10 +1494,15 @@
 
       if(doneCount >= level.steps.length){
         state.completedLevels[levelId] = true;
+
         const next = getNextLevelId(levelId);
         if(next) state.unlockedLevels[next] = true;
+
         state.last = { level_id: levelId, step_index: level.steps.length - 1 };
         saveState();
+
+        Research.logEvent({ event:"level_completed", level_id: levelId, unlocked_next: next || "" });
+
         renderLevelComplete(levelId);
         return;
       }
@@ -1418,6 +1510,7 @@
       const nextIdx = getNextStepIndex(levelId);
       state.last = { level_id: levelId, step_index: nextIdx };
       saveState();
+
       renderPlay(levelId, nextIdx);
     }
 
@@ -1485,7 +1578,7 @@
     }
 
     // ---------------------------
-    // Escape
+    // Escape helpers
     // ---------------------------
     function escapeHtml(s){
       return String(s ?? "")
@@ -1500,8 +1593,8 @@
     // ---------------------------
     // Start
     // ---------------------------
-    Research.logEvent("session_start", { page: "boot" });
     renderLanding();
   </script>
 </body>
 </html>
+
